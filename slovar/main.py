@@ -92,7 +92,7 @@ class slovar(dict):
             raise AttributeError(e.message)
 
     def __setattr__(self, key, val):
-        if isinstance(val, dict):
+        if isinstance(val, dict) and not isinstance(val, slovar):
             val = slovar(val)
         self[key] = val
 
