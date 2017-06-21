@@ -1,4 +1,4 @@
-from dictset.operations.string import split_strip
+from slovar.operations.string import split_strip
 
 
 def expand_list(param):
@@ -20,7 +20,7 @@ def expand_list(param):
 
 def process_fields(fields, parse=True):
     # Avoid circular dependencies
-    from dictset import dictset
+    from slovar import slovar
 
     fields_only = []
     fields_exclude = []
@@ -74,7 +74,7 @@ def process_fields(fields, parse=True):
         else:
             fields_only.append(field)
 
-    return dictset({
+    return slovar({
              'only': fields_only,
              'exclude':fields_exclude,
              'nested': nested,

@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 import dateutil
 
-from dictset.errors import DValueError
+from slovar.errors import DValueError
 
 
 def dot_split(s):

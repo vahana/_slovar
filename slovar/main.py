@@ -1,16 +1,16 @@
 from itertools import groupby
 
-from dictset.errors import DKeyError, DValueError
-from dictset.operations.string import split_strip, str2dt
-from dictset.operations.dict import flat, unflat, merge
-from dictset.operations.list import process_fields
+from slovar.errors import DKeyError, DValueError
+from slovar.operations.string import split_strip, str2dt
+from slovar.operations.dict import flat, unflat, merge
+from slovar.operations.list import process_fields
 
 
-class dictset(dict):
+class slovar(dict):
 
     """Named dict, with some set functionalities
 
-        dset = dictset(a=1,b={'c':1})
+        dset = slovar(a=1,b={'c':1})
         dset.a == dset['a'] == 1
         dset.b.c == 1
         dset.subset(['a']) == {'a':1} == dset.subset('-b')
@@ -48,10 +48,10 @@ class dictset(dict):
     @classmethod
     def build_from(cls, source, rules, allow_empty=True,
                     allow_missing=False, inverse=False):
-        _d = dictset()
+        _d = slovar()
 
-        flat_rules = dictset(rules).flat()
-        flat_source = dictset(source).flat()
+        flat_rules = slovar(rules).flat()
+        flat_source = slovar(source).flat()
         flat_source.update(source)
 
         for key, val in flat_rules.items():
@@ -76,11 +76,11 @@ class dictset(dict):
 
     def __init__(self, *arg, **kw):
         try:
-            super(dictset, self).__init__(*arg, **kw)
+            super(slovar, self).__init__(*arg, **kw)
         except ValueError as e:
             raise DValueError(e.message)
 
-        self.to_dictset()
+        self.to_slovar()
 
     def __getattr__(self, key):
         if key.startswith('__'): # dont touch the special attributes
@@ -93,7 +93,7 @@ class dictset(dict):
 
     def __setattr__(self, key, val):
         if isinstance(val, dict):
-            val = dictset(val)
+            val = slovar(val)
         self[key] = val
 
     def __delattr__(self, key):
@@ -103,7 +103,7 @@ class dictset(dict):
         if isinstance(item, (tuple, list, set)):
             return bool(set(self.keys()) & set(item))
         else:
-            return super(dictset, self).__contains__(item)
+            return super(slovar, self).__contains__(item)
 
     def __add__(self, item):
         return self.copy().update(item)
@@ -113,22 +113,22 @@ class dictset(dict):
 
     def __getitem__(self, key):
         try:
-            return super(dictset, self).__getitem__(key)
+            return super(slovar, self).__getitem__(key)
         except KeyError as e:
             raise DKeyError(e.message)
 
     def to_dict(self, fields):
         return self.extract(fields)
 
-    def to_dictset(self):
+    def to_slovar(self):
         for key, val in self.items():
             if isinstance(val, dict):
-                self[key] = dictset(val)
+                self[key] = slovar(val)
             if isinstance(val, list):
                 new_list = []
                 for each in val:
                     if isinstance(each, dict):
-                        new_list.append(dictset(each))
+                        new_list.append(slovar(each))
                     else:
                         new_list.append(each)
                 self[key] = new_list
@@ -136,7 +136,7 @@ class dictset(dict):
         return self
 
     def copy(self):
-        return dictset(super(dictset, self).copy())
+        return slovar(super(slovar, self).copy())
 
     def extract(self, fields):
         if not fields:
@@ -182,7 +182,7 @@ class dictset(dict):
 
         for new_key, key in show_as_r.items():
             if key in _d:
-                _d.merge(dictset({new_key:_d.get(key)}))
+                _d.merge(slovar({new_key:_d.get(key)}))
 
         #remove old keys
         for _k in show_as_r.values():
@@ -203,7 +203,7 @@ class dictset(dict):
                     elif tr == 'float':
                         _d[key] = float(_d[key]) if _d[key] else _d[key]
                         continue
-                    elif tr == 'flat' and isinstance(_d[key], dictset):
+                    elif tr == 'flat' and isinstance(_d[key], slovar):
                         _d[key] = _d[key].flat()
                         continue
                     elif tr == 'dt':
@@ -214,12 +214,12 @@ class dictset(dict):
                     try:
                         method = getattr(_type, tr)
                         if not callable(method):
-                            raise dictset.DValueError(
+                            raise slovar.DValueError(
                                 '`%s` is not a callable for type `%s`'
                                     % (tr, _type))
                         _d[key] = method(_d[key])
                     except AttributeError as e:
-                        raise dictset.DValueError(
+                        raise slovar.DValueError(
                                 'type `%s` does not have a method `%s`'
                                     % (_type, tr))
 
@@ -237,7 +237,7 @@ class dictset(dict):
         else:
             prefixes = prefix
 
-        _d = dictset()
+        _d = slovar()
         for k, v in self.items():
             for pref in prefixes:
                 _pref = pref[:-1]
@@ -269,7 +269,7 @@ class dictset(dict):
             keys, parse=False
         ).mget(['only','exclude'])
 
-        _d = dictset()
+        _d = slovar()
 
         if only and exclude:
             raise DValueError(
@@ -282,7 +282,7 @@ class dictset(dict):
             exact = [it for it in only if not it.endswith('*')]
 
             if exact:
-                _d = dictset(
+                _d = slovar(
                     [[k, v] for (k, v) in self.items() if k in exact]
                 )
 
@@ -290,7 +290,7 @@ class dictset(dict):
                 _d = _d.update_with(self.get_by_prefix(prefixed))
 
         elif exclude:
-            _d = dictset([[k, v] for (k, v) in self.items()
+            _d = slovar([[k, v] for (k, v) in self.items()
                           if k not in exclude])
 
         return _d
@@ -301,7 +301,7 @@ class dictset(dict):
         return self
 
     def update(self, d_):
-        super(dictset, self).update(dictset(d_))
+        super(slovar, self).update(slovar(d_))
         return self
 
     def merge(self, d_):
@@ -321,7 +321,7 @@ class dictset(dict):
         if prefix[-1] != '.':
             prefix += sep
 
-        _dict = dictset(defaults)
+        _dict = slovar(defaults)
         for key, val in self.items():
             if key.startswith(prefix):
                 _k = key.partition(prefix)[-1]
@@ -383,24 +383,24 @@ class dictset(dict):
         return True
 
     def transform(self, rules):
-        _d = dictset()
+        _d = slovar()
         flat_dict = self.flat()
 
         for path, val in flat_dict.items():
             if path in rules:
-                _d.merge(dictset.from_dotted(rules[path], val))
+                _d.merge(slovar.from_dotted(rules[path], val))
 
         return _d
 
     def flat(self, keep_lists=True):
-        return dictset(flat(self, keep_lists=keep_lists))
+        return slovar(flat(self, keep_lists=keep_lists))
 
     def unflat(self):
-        return dictset(unflat(self))
+        return slovar(unflat(self))
 
     def set_default(self, name, val):
         if name not in self.flat():
-            self.merge(dictset.from_dotted(name, val))
+            self.merge(slovar.from_dotted(name, val))
         return val
 
     def get_first(self, keys):
@@ -492,7 +492,7 @@ class dictset(dict):
         return not other_ or self.subset(other_.keys()) == other_
 
     def pop_many(self, keys):
-        poped = dictset()
+        poped = slovar()
         for key in keys:
             poped[key] = self.pop(key, None)
         return poped

@@ -1,14 +1,14 @@
 from datetime import datetime
 import pytest
-from dictset import dictset
-from dictset.operations.dict import merge
-from dictset.operations.list import expand_list
-from dictset.errors import DValueError
+from slovar import slovar
+from slovar.operations.dict import merge
+from slovar.operations.list import expand_list
+from slovar.errors import DValueError
 
 
 class TestDictSet():
     def test(self):
-        dset = dictset(a=1)
+        dset = slovar(a=1)
 
         assert isinstance(dset, dict) is True
         assert dset.a == dset['a']
@@ -26,7 +26,7 @@ class TestDictSet():
         assert 'b' not in dset
 
     def test_subset(self):
-        dset = dictset(a=1, b=2, c=3)
+        dset = slovar(a=1, b=2, c=3)
 
         assert set(dset.subset(['a', 'c']).keys()) == set(['a', 'c'])
         assert set(dset.subset(['-a']).keys()) == set(['b', 'c'])
@@ -43,19 +43,19 @@ class TestDictSet():
         assert set(dset.subset(['-a', '-NOTTHERE']).keys()) == set(['b', 'c'])
 
     def test_remove(self):
-        dset = dictset(a=1, b=2, c=3)
+        dset = slovar(a=1, b=2, c=3)
 
         assert dset.remove([]) == dset
         assert dset.remove(['NOTTHERE']) == dset
         assert dset.remove(['b', 'c']) == dict(a=1)
 
     def test_update(self):
-        dset = dictset(a=1, b=2, c=3)
+        dset = slovar(a=1, b=2, c=3)
         assert dset.update(dict(d=4)).d == 4
         assert dset.d == 4
 
     def test_copy(self):
-        dset = dictset(a=1, b=2, c=3)
+        dset = slovar(a=1, b=2, c=3)
         dset_copy = dset.copy()
         dset_alias = dset
 
@@ -64,7 +64,7 @@ class TestDictSet():
         assert id(dset) != id(dset_copy)
 
     def test_pop_by_values(self):
-        dset = dictset(a=1, b=2, c=2)
+        dset = slovar(a=1, b=2, c=2)
         dset_copy = dset.copy()
         dset.pop_by_values(666)
         assert dset == dset_copy
@@ -96,32 +96,32 @@ class TestDictSet():
         merge(d1, dict(a=dict(b=1)))
         assert d1 == {'a': {'c': 1, 'b': 1}}
 
-        d1 = dictset(a={})
+        d1 = slovar(a={})
         d1.merge({})
 
     def test__getattr__(self):
-        d1 = dictset()
+        d1 = slovar()
         with pytest.raises(AttributeError):
             d1.NOTTHERE
         d1['a'] = 1
 
     def test__contains__(self):
-        d1 = dictset(a=dict(b=1))
+        d1 = slovar(a=dict(b=1))
         assert ['a', 'b'] in d1
 
-    def test_to_dictset(self):
-        d1 = dictset(a=[dict(c=1), 1])
-        assert isinstance(d1.a[0], dictset)
+    def test_to_slovar(self):
+        d1 = slovar(a=[dict(c=1), 1])
+        assert isinstance(d1.a[0], slovar)
 
     def test_get_tree(self):
-        d1 = dictset({'a.b':1, 'a.c':2})
+        d1 = slovar({'a.b':1, 'a.c':2})
         assert d1.get_tree('a') == {'c': 2, 'b': 1}
 
     def test_from_dotted(self):
-        assert dictset.from_dotted('a.b.c', 1) == {'a': {'b': {'c': 1}}}
+        assert slovar.from_dotted('a.b.c', 1) == {'a': {'b': {'c': 1}}}
 
     def test_has(self):
-        d1 = dictset(a=1)
+        d1 = slovar(a=1)
         with pytest.raises(DValueError):
             d1.has('a', check_type=basestring)
 

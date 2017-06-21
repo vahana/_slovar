@@ -12,9 +12,9 @@ install_requires = [
 ]
 
 setup(
-    name='dictset',
+    name='slovar',
     version=VERSION,
-    description='dictset',
+    description='slovar',
     long_description=README + '\n\n' +  CHANGES,
     classifiers=[
         "Programming Language :: Python",
@@ -22,7 +22,7 @@ setup(
     author='vahan',
     author_email='aivosha@gmail.com',
     url='',
-    keywords='dict dictset',
+    keywords='dict slovar',
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
