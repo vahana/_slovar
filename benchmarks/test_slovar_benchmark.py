@@ -22,7 +22,7 @@ LOREM = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ut dictum
 # LOREM = 'L'
 
 
-class TestDictSetBenchmark(object):
+class TestSlovarBenchmark(object):
     sample_d = slovar(
         a=1,
         b=LOREM,

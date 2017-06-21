@@ -6,7 +6,7 @@ from slovar.operations.list import expand_list
 from slovar.errors import DValueError
 
 
-class TestDictSet():
+class TestSlovar():
     def test(self):
         dset = slovar(a=1)
 
