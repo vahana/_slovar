@@ -48,7 +48,7 @@ class slovar(dict):
     @classmethod
     def build_from(cls, source, rules, allow_empty=True,
                     allow_missing=False, inverse=False):
-        _d = slovar()
+        _d = cls()
 
         flat_rules = slovar(rules).flat()
         flat_source = slovar(source).flat()
@@ -134,6 +134,9 @@ class slovar(dict):
                 self[key] = new_list
 
         return self
+
+    def to_dictset(self):
+        return self.to_slovar()
 
     def copy(self):
         return slovar(super(slovar, self).copy())
