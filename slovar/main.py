@@ -120,7 +120,9 @@ class slovar(dict):
     def to_dict(self, fields):
         return self.extract(fields)
 
-    def to_slovar(self, cls=slovar):
+    def to_slovar(self, cls=None):
+        if not cls:
+            cls = self.__class__
         for key, val in self.items():
             if isinstance(val, dict):
                 self[key] = cls(val)
