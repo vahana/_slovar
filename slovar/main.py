@@ -1,9 +1,9 @@
 from itertools import groupby
 
 from slovar.errors import DKeyError, DValueError
-from slovar.operations.string import split_strip, str2dt
-from slovar.operations.dict import flat, unflat, merge
-from slovar.operations.list import process_fields
+from slovar.operations.strings import split_strip, str2dt
+from slovar.operations.dictionaries import flat, unflat, merge
+from slovar.operations.lists import process_fields
 
 
 class slovar(dict):

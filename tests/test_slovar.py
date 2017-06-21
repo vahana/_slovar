@@ -1,8 +1,8 @@
 from datetime import datetime
 import pytest
 from slovar import slovar
-from slovar.operations.dict import merge
-from slovar.operations.list import expand_list
+from slovar.operations.dictionaries import merge
+from slovar.operations.lists import expand_list
 from slovar.errors import DValueError
 
 
