@@ -120,15 +120,15 @@ class slovar(dict):
     def to_dict(self, fields):
         return self.extract(fields)
 
-    def to_slovar(self):
+    def to_slovar(self, cls=slovar):
         for key, val in self.items():
             if isinstance(val, dict):
-                self[key] = slovar(val)
+                self[key] = cls(val)
             if isinstance(val, list):
                 new_list = []
                 for each in val:
                     if isinstance(each, dict):
-                        new_list.append(slovar(each))
+                        new_list.append(cls(each))
                     else:
                         new_list.append(each)
                 self[key] = new_list
