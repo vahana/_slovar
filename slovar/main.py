@@ -16,6 +16,8 @@ class slovar(dict):
         dset.subset(['a']) == {'a':1} == dset.subset('-b')
 
     """
+    # Note: We use self.__class__ to return new instances of subclasses
+    # instead of slovar when necessary
 
     DKeyError = DKeyError
     DValueError = DValueError
@@ -50,8 +52,8 @@ class slovar(dict):
                     allow_missing=False, inverse=False):
         _d = cls()
 
-        flat_rules = slovar(rules).flat()
-        flat_source = slovar(source).flat()
+        flat_rules = cls(rules).flat()
+        flat_source = cls(source).flat()
         flat_source.update(source)
 
         for key, val in flat_rules.items():
@@ -93,7 +95,7 @@ class slovar(dict):
 
     def __setattr__(self, key, val):
         if isinstance(val, dict) and not isinstance(val, slovar):
-            val = slovar(val)
+            val = self.__class__(val)
         self[key] = val
 
     def __delattr__(self, key):
@@ -140,7 +142,7 @@ class slovar(dict):
         return self.to_slovar()
 
     def copy(self):
-        return slovar(super(slovar, self).copy())
+        return self.__class__(super(slovar, self).copy())
 
     def extract(self, fields):
         if not fields:
@@ -186,7 +188,7 @@ class slovar(dict):
 
         for new_key, key in show_as_r.items():
             if key in _d:
-                _d.merge(slovar({new_key:_d.get(key)}))
+                _d.merge(self.__class__({new_key:_d.get(key)}))
 
         #remove old keys
         for _k in show_as_r.values():
@@ -241,7 +243,7 @@ class slovar(dict):
         else:
             prefixes = prefix
 
-        _d = slovar()
+        _d = self.__class__()
         for k, v in self.items():
             for pref in prefixes:
                 _pref = pref[:-1]
@@ -273,7 +275,7 @@ class slovar(dict):
             keys, parse=False
         ).mget(['only','exclude'])
 
-        _d = slovar()
+        _d = self.__class__()
 
         if only and exclude:
             raise DValueError(
@@ -286,7 +288,7 @@ class slovar(dict):
             exact = [it for it in only if not it.endswith('*')]
 
             if exact:
-                _d = slovar(
+                _d = self.__class__(
                     [[k, v] for (k, v) in self.items() if k in exact]
                 )
 
@@ -294,7 +296,7 @@ class slovar(dict):
                 _d = _d.update_with(self.get_by_prefix(prefixed))
 
         elif exclude:
-            _d = slovar([[k, v] for (k, v) in self.items()
+            _d = self.__class__([[k, v] for (k, v) in self.items()
                           if k not in exclude])
 
         return _d
@@ -305,7 +307,7 @@ class slovar(dict):
         return self
 
     def update(self, d_):
-        super(slovar, self).update(slovar(d_))
+        super(slovar, self).update(self.__class__(d_))
         return self
 
     def merge(self, d_):
@@ -325,7 +327,7 @@ class slovar(dict):
         if prefix[-1] != '.':
             prefix += sep
 
-        _dict = slovar(defaults)
+        _dict = self.__class__(defaults)
         for key, val in self.items():
             if key.startswith(prefix):
                 _k = key.partition(prefix)[-1]
@@ -387,7 +389,7 @@ class slovar(dict):
         return True
 
     def transform(self, rules):
-        _d = slovar()
+        _d = self.__class__()
         flat_dict = self.flat()
 
         for path, val in flat_dict.items():
@@ -397,10 +399,10 @@ class slovar(dict):
         return _d
 
     def flat(self, keep_lists=True):
-        return slovar(flat(self, keep_lists=keep_lists))
+        return self.__class__(flat(self, keep_lists=keep_lists))
 
     def unflat(self):
-        return slovar(unflat(self))
+        return self.__class__(unflat(self))
 
     def set_default(self, name, val):
         if name not in self.flat():
@@ -496,7 +498,7 @@ class slovar(dict):
         return not other_ or self.subset(other_.keys()) == other_
 
     def pop_many(self, keys):
-        poped = slovar()
+        poped = self.__class__()
         for key in keys:
             poped[key] = self.pop(key, None)
         return poped
