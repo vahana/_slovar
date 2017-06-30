@@ -138,9 +138,6 @@ class slovar(dict):
 
         return self
 
-    def to_dictset(self):
-        return self.to_slovar()
-
     def copy(self):
         return self.__class__(super(slovar, self).copy())
 
