@@ -402,8 +402,9 @@ class slovar(dict):
         return self.__class__(unflat(self))
 
     def set_default(self, name, val):
+        cls = self.__class__
         if name not in self.flat():
-            self.merge(slovar.from_dotted(name, val))
+            self.merge(cls.from_dotted(name, val))
         return val
 
     def get_first(self, keys):

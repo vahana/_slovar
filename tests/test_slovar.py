@@ -138,3 +138,13 @@ class TestSlovar():
         assert expand_list([1,2,[3,4]]) == [1,2,3,4]
 
         assert expand_list([1,2,'3,4']) == [1,2,'3','4']
+
+    def test_set_default(self):
+        class Slovarik(slovar):
+            pass
+
+        d1 = Slovarik(a=1)
+        d1.set_default('b.c', 1)
+        assert type(d1) == Slovarik
+        assert type(d1.b) == Slovarik
+
