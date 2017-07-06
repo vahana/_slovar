@@ -3,7 +3,7 @@ import pytest
 from slovar import slovar
 from slovar.operations.dictionaries import merge
 from slovar.operations.lists import expand_list
-from slovar.errors import DValueError
+from slovar.errors import DValueError, DKeyError
 
 
 class TestSlovar():
@@ -101,7 +101,7 @@ class TestSlovar():
 
     def test__getattr__(self):
         d1 = slovar()
-        with pytest.raises(AttributeError):
+        with pytest.raises(DKeyError):
             d1.NOTTHERE
         d1['a'] = 1
 
