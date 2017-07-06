@@ -28,6 +28,7 @@ def process_fields(fields, parse=True):
     show_as = {}
     show_as_r = {}
     transforms = {}
+
     star = False
 
     if isinstance(fields, basestring):
