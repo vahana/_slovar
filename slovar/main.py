@@ -91,7 +91,12 @@ class slovar(dict):
         try:
             return self[key]
         except KeyError as e:
-            raise DKeyError(e.message)
+            raise AttributeError
+            # reason to raise DKeyError here is for prf to catch and turn into HTTP error.
+            # This way we can differentiate special DKeyErrors from regular KeyErrors.
+            #this causes other other libs act weird,
+            #e.g. pymongo throws KeyError when running an aggregation
+            # raise DKeyError(e.message)
 
     def __setattr__(self, key, val):
         if isinstance(val, dict) and not isinstance(val, slovar):
