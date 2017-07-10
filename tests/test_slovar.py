@@ -101,7 +101,7 @@ class TestSlovar():
 
     def test__getattr__(self):
         d1 = slovar()
-        with pytest.raises(DKeyError):
+        with pytest.raises(AttributeError):
             d1.NOTTHERE
         d1['a'] = 1
 

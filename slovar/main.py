@@ -77,6 +77,7 @@ class slovar(dict):
         return _d.unflat()
 
     def __init__(self, *arg, **kw):
+
         try:
             super(slovar, self).__init__(*arg, **kw)
         except ValueError as e:
@@ -91,7 +92,7 @@ class slovar(dict):
         try:
             return self[key]
         except KeyError as e:
-            raise AttributeError
+            raise AttributeError(e)
             # reason to raise DKeyError here is for prf to catch and turn into HTTP error.
             # This way we can differentiate special DKeyErrors from regular KeyErrors.
             #this causes other other libs act weird,
