@@ -148,3 +148,15 @@ class TestSlovar():
         assert type(d1) == Slovarik
         assert type(d1.b) == Slovarik
 
+    def test_raise_getattr(self):
+        class Slovarik(slovar):
+            def raise_getattr_exc(self, error):
+                raise NotImplementedError(error)
+
+        d = Slovarik(a=1)
+        try:
+            d.b
+        except NotImplementedError:
+            pass
+        else:
+            raise Exception('Expected an exception')
