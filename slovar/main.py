@@ -22,6 +22,11 @@ class slovar(dict):
     DKeyError = DKeyError
     DValueError = DValueError
 
+    # Configurable exceptions
+    ATTRIBUTE_ERROR_CLS = AttributeError
+    KEY_ERROR_CLS = DKeyError
+    VALUE_ERROR_CLS = DValueError
+
 
     @classmethod
     def to_dicts(cls, iterable, fields):
@@ -76,23 +81,28 @@ class slovar(dict):
 
         return _d.unflat()
 
-    def __init__(self, *arg, **kw):
+    def set_exception_classes(self, attribute_error=AttributeError,
+                              key_error=DKeyError, value_error=DValueError):
+        self.ATTRIBUTE_ERROR_CLS = attribute_error
+        self.KEY_ERROR_CLS = key_error
+        self.VALUE_ERROR_CLS = value_error
 
+    def __init__(self, *arg, **kw):
         try:
             super(slovar, self).__init__(*arg, **kw)
         except ValueError as e:
-            raise DValueError(e.message)
+            raise self.VALUE_ERROR_CLS(e.message)
 
         self.to_slovar()
 
     def __getattr__(self, key):
         if key.startswith('__'): # dont touch the special attributes
-            raise AttributeError('Attribute error %s' % key)
+            raise self.ATTRIBUTE_ERROR_CLS('Attribute error %s' % key)
 
         try:
             return self[key]
         except KeyError as e:
-            raise AttributeError(e)
+            raise self.ATTRIBUTE_ERROR_CLS(e)
             # reason to raise DKeyError here is for prf to catch and turn into HTTP error.
             # This way we can differentiate special DKeyErrors from regular KeyErrors.
             #this causes other other libs act weird,
@@ -123,7 +133,7 @@ class slovar(dict):
         try:
             return super(slovar, self).__getitem__(key)
         except KeyError as e:
-            raise DKeyError(e.message)
+            raise self.KEY_ERROR_CLS(e.message)
 
     def to_dict(self, fields):
         return self.extract(fields)
@@ -281,7 +291,7 @@ class slovar(dict):
         _d = self.__class__()
 
         if only and exclude:
-            raise DValueError(
+            raise self.VALUE_ERROR_CLS(
                 'Can only supply either positive or negative keys,'
                 ' but not both'
             )
@@ -387,7 +397,7 @@ class slovar(dict):
                     error_msg('Missing key: `%s`' % key)
 
         if (errors and _all) or (not _all and len(errors) >= len(keys)):
-            raise DValueError('.'.join(errors))
+            raise self.VALUE_ERROR_CLS('.'.join(errors))
 
         return True
 
@@ -418,7 +428,7 @@ class slovar(dict):
             if key in self:
                 return self[key]
 
-        raise DKeyError('Neither of `%s` keys found' % keys)
+        raise self.KEY_ERROR_CLS('Neither of `%s` keys found' % keys)
 
     def fget(self, key, *arg, **kw):
         return self.flat().get(key, *arg, **kw)
@@ -456,7 +466,7 @@ class slovar(dict):
                 else:
                     self_dict[key] += val
             else:
-                raise DValueError('`%s` is not a list' % key)
+                raise self.VALUE_ERROR_CLS('`%s` is not a list' % key)
 
         def _append_to_set(key, val):
             _append_to(key, val)
