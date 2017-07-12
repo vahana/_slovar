@@ -87,17 +87,11 @@ class slovar(dict):
 
     def __getattr__(self, key):
         if key.startswith('__'): # dont touch the special attributes
-            self.raise_getattr_exc('Attribute error %s' % key)
-
+            raise AttributeError('Attribute error %s' % key)
         try:
             return self[key]
         except KeyError as e:
             self.raise_getattr_exc(e)
-            # reason to raise DKeyError here is for prf to catch and turn into HTTP error.
-            # This way we can differentiate special DKeyErrors from regular KeyErrors.
-            #this causes other other libs act weird,
-            #e.g. pymongo throws KeyError when running an aggregation
-            # raise DKeyError(e.message)
 
     def raise_getattr_exc(self, error):
         raise AttributeError(error)
