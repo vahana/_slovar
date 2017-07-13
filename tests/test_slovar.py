@@ -3,8 +3,6 @@ import pytest
 from slovar import slovar
 from slovar.operations.dictionaries import merge
 from slovar.operations.lists import expand_list
-from slovar.errors import DValueError, DKeyError
-
 
 class TestSlovar():
     def test(self):
@@ -122,12 +120,12 @@ class TestSlovar():
 
     def test_has(self):
         d1 = slovar(a=1)
-        with pytest.raises(DValueError):
+        with pytest.raises(ValueError):
             d1.has('a', check_type=basestring)
 
         assert d1.has('a', check_type=int) == True
 
-        with pytest.raises(DValueError):
+        with pytest.raises(ValueError):
             d1.has('b', check_type=int)
 
     def test_expand_list(self):

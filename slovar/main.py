@@ -1,6 +1,5 @@
 from itertools import groupby
 
-from slovar.errors import DKeyError, DValueError
 from slovar.operations.strings import split_strip, str2dt
 from slovar.operations.dictionaries import flat, unflat, merge
 from slovar.operations.lists import process_fields
@@ -18,10 +17,6 @@ class slovar(dict):
     """
     # Note: We use self.__class__ to return new instances of subclasses
     # instead of slovar when necessary
-
-    DKeyError = DKeyError
-    DValueError = DValueError
-
 
     @classmethod
     def to_dicts(cls, iterable, fields):
@@ -77,12 +72,7 @@ class slovar(dict):
         return _d.unflat()
 
     def __init__(self, *arg, **kw):
-
-        try:
-            super(slovar, self).__init__(*arg, **kw)
-        except ValueError as e:
-            raise DValueError(e.message)
-
+        super(slovar, self).__init__(*arg, **kw)
         self.to_slovar()
 
     def __getattr__(self, key):
@@ -117,10 +107,7 @@ class slovar(dict):
         return self.update(item)
 
     def __getitem__(self, key):
-        try:
-            return super(slovar, self).__getitem__(key)
-        except KeyError as e:
-            raise DKeyError(e.message)
+        return super(slovar, self).__getitem__(key)
 
     def to_dict(self, fields):
         return self.extract(fields)
@@ -213,19 +200,20 @@ class slovar(dict):
                         _d[key] = _d[key].flat()
                         continue
                     elif tr == 'dt':
-                        _d[key] = str2dt(_d[key])
+                        if _d[key]:
+                            _d[key] = str2dt(_d[key])
                         continue
 
                     _type = type(_d[key])
                     try:
                         method = getattr(_type, tr)
                         if not callable(method):
-                            raise slovar.DValueError(
+                            raise ValueError(
                                 '`%s` is not a callable for type `%s`'
                                     % (tr, _type))
                         _d[key] = method(_d[key])
                     except AttributeError as e:
-                        raise slovar.DValueError(
+                        raise ValueError(
                                 'type `%s` does not have a method `%s`'
                                     % (_type, tr))
 
@@ -278,7 +266,7 @@ class slovar(dict):
         _d = self.__class__()
 
         if only and exclude:
-            raise DValueError(
+            raise ValueError(
                 'Can only supply either positive or negative keys,'
                 ' but not both'
             )
@@ -384,7 +372,7 @@ class slovar(dict):
                     error_msg('Missing key: `%s`' % key)
 
         if (errors and _all) or (not _all and len(errors) >= len(keys)):
-            raise DValueError('.'.join(errors))
+            raise ValueError('.'.join(errors))
 
         return True
 
@@ -415,7 +403,7 @@ class slovar(dict):
             if key in self:
                 return self[key]
 
-        raise DKeyError('Neither of `%s` keys found' % keys)
+        raise KeyError('Neither of `%s` keys found' % keys)
 
     def fget(self, key, *arg, **kw):
         return self.flat().get(key, *arg, **kw)
@@ -453,7 +441,7 @@ class slovar(dict):
                 else:
                     self_dict[key] += val
             else:
-                raise DValueError('`%s` is not a list' % key)
+                raise ValueError('`%s` is not a list' % key)
 
         def _append_to_set(key, val):
             _append_to(key, val)
