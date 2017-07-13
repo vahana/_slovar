@@ -2,8 +2,6 @@ import re
 from datetime import datetime
 import dateutil
 
-from slovar.errors import DValueError
-
 
 def dot_split(s):
     return [part for part in re.split(r"(?<!\.)\.(?!\.)", s)]
@@ -39,7 +37,7 @@ def str2rdt(strdt):
 
 def str2dt(strdt):
     if not strdt:
-        raise DValueError('Datetime string can not be empty or None')
+        raise ValueError('Datetime string can not be empty or None')
 
     if isinstance(strdt, datetime):
         return datetime
@@ -51,5 +49,5 @@ def str2dt(strdt):
     try:
         return dateutil.parser.parse(strdt)
     except ValueError as e:
-        raise DValueError(
+        raise ValueError(
             'Datetime string `%s` not recognized as datetime. Did you miss +- signs for relative dates?' % strdt)
