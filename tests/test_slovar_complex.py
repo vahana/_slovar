@@ -139,6 +139,3 @@ class TestSlovarComplex(object):
 
         d1 = d1.update_with({'x':1}, append_to='x')
         assert 'x' in d1
-
-
-
