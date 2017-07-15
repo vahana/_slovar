@@ -113,3 +113,32 @@ class TestSlovarComplex(object):
         e = slovar(self.sample_d).subset(['c', 'd', 'e', 'f'])
         a = []
         assert d.update_with(e, append_to=a) == self.sample_d
+
+    def test_update_with_append_to_set(self):
+        d1 = slovar(
+            a = [],
+            aa = [1],
+            aaa = [{'b':1, 'c':2}]
+        )
+        d2 = slovar(
+            a = 1,
+            aa = 2,
+            aaa= [{'b':1, 'c': 3}, {'b':2, 'c': 33}]
+        )
+
+        for ix in range(2):
+            d1 = d1.update_with(d2, append_to_set=[
+                    'a',
+                    'aa',
+                    'aaa:b'
+            ])
+
+            assert len(d1.a) == 1
+            assert len(d1.aa) == 2
+            assert len(d1.aaa) == 2
+
+        d1 = d1.update_with({'x':1}, append_to='x')
+        assert 'x' in d1
+
+
+

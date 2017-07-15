@@ -170,8 +170,7 @@ class slovar(dict):
             flat_d = self.flat(keep_lists=0)
             process_lists(flat_d)
             flat_d = flat_d.subset(nested_keys)
-            _d.remove(nested.values())
-            _d.update(flat_d)
+            _d = _d.remove(nested.values()).update(flat_d)
 
         for new_key, key in show_as_r.items():
             if key in _d:
@@ -289,10 +288,15 @@ class slovar(dict):
 
         return _d
 
-    def remove(self, keys):
+    def remove(self, keys, flat=False):
+        if isinstance(keys, basestring):
+            keys = [keys]
+
+        _self = self.flat() if flat else self.copy()
+
         for k in keys:
-            self.pop(k, None)
-        return self
+            _self.pop(k, None)
+        return _self.unflat() if flat else _self
 
     def update(self, d_):
         super(slovar, self).update(self.__class__(d_))
@@ -435,11 +439,14 @@ class slovar(dict):
             _dict = self
 
         def _append_to(key, val):
+            #if key is missing, create empty list
+            self_dict.setdefault(key, [])
+
             if isinstance(self_dict[key], list):
                 if isinstance(val, list):
                     self_dict[key].extend(val)
                 else:
-                    self_dict[key] += val
+                    self_dict[key].append(val)
             else:
                 raise ValueError('`%s` is not a list' % key)
 
@@ -447,20 +454,22 @@ class slovar(dict):
             _append_to(key, val)
             set_key = append_to_set.get(key)
 
+            #ie append_to_set=people:full_name. `full_name` is a set_key
+            #this will mean make people unique for inner field `full_name`
             if set_key:
                 _uniques = []
                 _met = []
                 for each in self_dict[key]:
-                    # if there is not set_key, it must be treated as unique
+                    # if there is not set_key in each, it must be treated as unique
                     if set_key not in each:
                         _uniques.append(each)
                         continue
-
                     if each[set_key] in _met:
                         continue
 
                     _met.append(each[set_key])
                     _uniques.append(each)
+
                 self_dict[key] = _uniques
             else:
                 self_dict[key] = list(set(self_dict[key]))
@@ -468,13 +477,12 @@ class slovar(dict):
         for key, val in _dict.items():
             if key in exclude:
                 continue
-            if overwrite or key not in self_dict:
-                if key in append_to and key in self_dict:
-                    _append_to(key, val)
-                elif key in append_to_set and key in self_dict:
-                    _append_to_set(key, val)
-                else:
-                    self_dict[key] = val
+            if key in append_to:
+                _append_to(key, val)
+            elif key in append_to_set:
+                _append_to_set(key, val)
+            else:
+                self_dict[key] = val
 
         return self_dict
 

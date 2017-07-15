@@ -47,6 +47,12 @@ class TestSlovar():
         assert dset.remove(['NOTTHERE']) == dset
         assert dset.remove(['b', 'c']) == dict(a=1)
 
+        dd = slovar(a=dict(b=1, d=2), c=1)
+        assert dd.remove('a') == dict(c=1)
+        assert dd.remove(['a']) == dict(c=1)
+        assert dd.remove('a.b') == dd
+        assert dd.remove('a.b', flat=True) == dict(a=dict(d=2),c=1)
+
     def test_update(self):
         dset = slovar(a=1, b=2, c=3)
         assert dset.update(dict(d=4)).d == 4
