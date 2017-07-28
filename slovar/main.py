@@ -1,4 +1,5 @@
 from itertools import groupby
+from collections import OrderedDict
 
 from slovar.operations.strings import split_strip, str2dt
 from slovar.operations.dictionaries import flat, unflat, merge
@@ -418,19 +419,22 @@ class slovar(dict):
     def update_with(self, _dict, overwrite=True, append_to=None, append_to_set=None,
                     reverse=False, exclude=[]):
 
-        if isinstance(append_to, basestring):
-            append_to = [append_to]
+        def process_append_to_param(_lst):
+            if isinstance(_lst, basestring):
+                _lst = [_lst]
 
-        if isinstance(append_to_set, basestring):
-            append_to_set = [append_to_set]
+            if not _lst:
+                return {}
 
-        append_to = append_to or []
+            _d = {}
+            for each in (_lst or []):
+                k,_,sk = each.partition(':')
+                _d[k]=sk
 
-        _append_to_set = {}
-        for each in (append_to_set or []):
-            k,_,sk = each.partition(':')
-            _append_to_set[k]=sk
-        append_to_set = _append_to_set
+            return _d
+
+        append_to = process_append_to_param(append_to)
+        append_to_set = process_append_to_param(append_to_set)
 
         if not reverse:
             self_dict = self.copy()
@@ -438,20 +442,42 @@ class slovar(dict):
             self_dict = _dict.copy()
             _dict = self
 
-        def _append_to(key, val):
+        def _build_list(key, val):
             #if key is missing, create empty list
-            self_dict.setdefault(key, [])
+            _lst = self_dict.get(key, [])
 
-            if isinstance(self_dict[key], list):
+            if isinstance(_lst, list):
                 if isinstance(val, list):
-                    self_dict[key].extend(val)
+                    _lst.extend(val)
                 else:
-                    self_dict[key].append(val)
+                    _lst.append(val)
             else:
                 raise ValueError('`%s` is not a list' % key)
 
+            return _lst
+
+        def _append_to(key, val):
+            _lst = _build_list(key, val)
+            sort_key = append_to.get(key)
+            sort_method = None
+            reverse = False
+
+            if sort_key:
+                if sort_key.startswith('-'):
+                    sort_key = sort_key[1:]
+                    reverse = True
+                elif sort_key.startswith('+'):
+                    sort_key = sort_key[1:]
+
+                if sort_key:
+                    sort_method = lambda x: x.get(sort_key)
+
+                _lst = sorted(_lst, key=sort_method, reverse=reverse)
+
+            return _lst
+
         def _append_to_set(key, val):
-            _append_to(key, val)
+            _lst = _build_list(key, val)
             set_key = append_to_set.get(key)
 
             #ie append_to_set=people:full_name. `full_name` is a set_key
@@ -459,7 +485,7 @@ class slovar(dict):
             if set_key:
                 _uniques = []
                 _met = []
-                for each in self_dict[key]:
+                for each in _lst:
                     # if there is not set_key in each, it must be treated as unique
                     if set_key not in each:
                         _uniques.append(each)
@@ -470,17 +496,23 @@ class slovar(dict):
                     _met.append(each[set_key])
                     _uniques.append(each)
 
-                self_dict[key] = _uniques
+                _lst = _uniques
             else:
-                self_dict[key] = list(set(self_dict[key]))
+                try:
+                    _lst = list(set(_lst))
+                except TypeError as e:
+                    raise ValueError('items in `%s` list not hashable. missed the set_key ?'\
+                                     % (key))
+
+            return _lst
 
         for key, val in _dict.items():
             if key in exclude:
                 continue
             if key in append_to:
-                _append_to(key, val)
+                self_dict[key] = _append_to(key, val)
             elif key in append_to_set:
-                _append_to_set(key, val)
+                self_dict[key] = _append_to_set(key, val)
             else:
                 self_dict[key] = val
 
