@@ -1,7 +1,9 @@
 import re
 from datetime import datetime
 import dateutil
+import logging
 
+log = logging.getLogger(__name__)
 
 def dot_split(s):
     return [part for part in re.split(r"(?<!\.)\.(?!\.)", s)]
@@ -35,7 +37,7 @@ def str2rdt(strdt):
             return dateutil.relativedelta.relativedelta(**{matches[word]:number})
 
 
-def str2dt(strdt):
+def str2dt(strdt, _raise=False):
     if not strdt:
         raise ValueError('Datetime string can not be empty or None')
 
@@ -49,5 +51,8 @@ def str2dt(strdt):
     try:
         return dateutil.parser.parse(strdt)
     except ValueError as e:
-        raise ValueError(
-            'Datetime string `%s` not recognized as datetime. Did you miss +- signs for relative dates?' % strdt)
+        msg = 'Datetime string `%s` not recognized as datetime. Did you miss +- signs for relative dates?' % strdt
+        if _raise:
+            raise ValueError(msg)
+        else:
+            log.error(msg)
