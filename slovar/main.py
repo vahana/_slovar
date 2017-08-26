@@ -416,8 +416,7 @@ class slovar(dict):
     def deep_update(self, _dict):
         return self.flat().update(_dict.flat()).unflat()
 
-    def update_with(self, _dict, overwrite=True, append_to=None, append_to_set=None,
-                    reverse=False, exclude=[]):
+    def update_with(self, _dict, overwrite=True, append_to=None, append_to_set=None):
 
         def process_append_to_param(_lst):
             if isinstance(_lst, basestring):
@@ -435,12 +434,7 @@ class slovar(dict):
 
         append_to = process_append_to_param(append_to)
         append_to_set = process_append_to_param(append_to_set)
-
-        if not reverse:
-            self_dict = self.copy()
-        else:
-            self_dict = _dict.copy()
-            _dict = self
+        self_dict = self.copy()
 
         def _build_list(key, val):
             #if key is missing, create empty list
@@ -507,20 +501,17 @@ class slovar(dict):
             return _lst
 
         for key, val in _dict.items():
-            if key in exclude:
-                continue
             if key in append_to:
                 self_dict[key] = _append_to(key, val)
             elif key in append_to_set:
                 self_dict[key] = _append_to_set(key, val)
-            else:
+            elif overwrite or key not in self_dict:
                 self_dict[key] = val
 
         return self_dict
 
-    def merge_with(self, _dict, reverse=False):
-        return self.update_with(_dict, overwrite=False,
-                                reverse=reverse)
+    def merge_with(self, _dict):
+        return self.update_with(_dict, overwrite=False)
 
     def contains(self, other, exclude=None):
         other_ = other.subset(exclude)

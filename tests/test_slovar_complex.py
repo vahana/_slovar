@@ -159,3 +159,25 @@ class TestSlovarComplex(object):
 
         d1 = d1.update_with({'x':1}, append_to='x')
         assert 'x' in d1
+
+    def test_update_with_overwrite(self):
+        d1 = slovar(
+            a = {'b': 1},
+            c = 2,
+            d = [2]
+        )
+
+        d2 = d1.update_with({'c':1, 'd':3})
+        assert d2.c == 1
+        assert d2.d == 3
+
+        d2 = d1.update_with({'c':1, 'd':3}, overwrite=False)
+        assert d2.c == 2
+        assert d2.d == [2]
+
+        d2 = d1.update_with({'d':1}, append_to='d')
+        assert d2.d == [2,1]
+
+        d2 = d1.update_with({'d':4}, append_to='d', overwrite=False)
+        assert d2.d == [2,4]
+
