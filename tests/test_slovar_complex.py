@@ -147,18 +147,24 @@ class TestSlovarComplex(object):
         )
 
         for ix in range(2):
-            d1 = d1.update_with(d2, append_to_set=[
+            d3 = d1.update_with(d2, append_to_set=[
                     'a',
                     'aa',
                     'aaa:b'
             ])
 
-            assert len(d1.a) == 1
-            assert len(d1.aa) == 2
-            assert len(d1.aaa) == 2
+            assert len(d3.a) == 1
+            assert len(d3.aa) == 2
+            assert len(d3.aaa) == 2
 
-        d1 = d1.update_with({'x':1}, append_to='x')
-        assert 'x' in d1
+        d3 = d1.update_with({'x':1}, append_to='x')
+        assert 'x' in d3
+
+    @pytest.mark.skip('this is a bug. fix and enable.')
+    def test_update_with_append_to_set2():
+        d3 = d1.update_with({'aaa':{'b': 1, 'c':11, 'd':33}}, append_to_set=['aaa:b'])
+        assert d3.aaa[0].c == 11
+        assert d3.aaa[0].d == 33
 
     def test_update_with_overwrite(self):
         d1 = slovar(
@@ -180,4 +186,21 @@ class TestSlovarComplex(object):
 
         d2 = d1.update_with({'d':4}, append_to='d', overwrite=False)
         assert d2.d == [2,4]
+
+    def test_update_with_flat(self):
+
+        d1 = slovar(
+            a = {'b':
+                    {'c': 1},
+                 'bb': 2},
+        )
+
+        d2 = slovar(
+            a = {'b':
+                    {'d': 2}}
+        )
+
+        d3 = d1.flat().update_with(d2.flat()).unflat()
+        assert d3.a.b.d == 2
+        assert d3.a.b.c == 1
 
