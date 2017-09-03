@@ -225,7 +225,7 @@ class slovar(dict):
 
 
         if defaults:
-            _d = _d.flat().merge_with(slovar(defaults).subset(fields).flat())
+            _d = _d.flat().merge_with(slovar(defaults).flat())
 
         return _d.unflat()
 
@@ -292,7 +292,7 @@ class slovar(dict):
                           if k not in exclude])
 
         if defaults:
-            _d = _d.flat().merge_with(slovar(defaults).subset(keys).flat()).unflat()
+            _d = _d.flat().merge_with(slovar(defaults).flat()).unflat()
 
         return _d
 
