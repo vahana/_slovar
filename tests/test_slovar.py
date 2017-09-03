@@ -40,6 +40,13 @@ class TestSlovar():
         assert set(dset.subset(['a', 'NOTTHERE']).keys()) == set(['a'])
         assert set(dset.subset(['-a', '-NOTTHERE']).keys()) == set(['b', 'c'])
 
+    def test_subset_defaults(self):
+        _d = slovar(a=1,b=2)
+        #adds the default
+        assert _d.subset('a,d', defaults={'d':3}) == {'a':1, 'd':3}
+        #does not overwrite with default if exists
+        assert _d.subset('a,b', defaults={'b':3}) == {'a':1, 'b':2}
+
     def test_remove(self):
         dset = slovar(a=1, b=2, c=3)
 

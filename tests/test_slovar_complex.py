@@ -65,6 +65,13 @@ class TestSlovarComplex(object):
             'c': self.sample_d['c'],
         }
 
+    def test_extract_with_defaults(self):
+        _d = slovar(a=1,b=2)
+        #adds the default
+        assert _d.extract('a,d', defaults={'d':3}) == {'a':1, 'd':3}
+        #does not overwrite with default if exists
+        assert _d.extract('a,b', defaults={'b':3}) == {'a':1, 'b':2}
+
     def test_extract_nested(self):
         d = slovar(self.sample_d)
         args = ['a', 'b', 'c', 'd.ii.*']

@@ -132,7 +132,7 @@ class slovar(dict):
     def copy(self):
         return self.__class__(super(slovar, self).copy())
 
-    def extract(self, fields):
+    def extract(self, fields, defaults=None):
         if not fields:
             return self
 
@@ -223,6 +223,10 @@ class slovar(dict):
                         _d[key] = tr.partition('=')[2]
                         continue
 
+
+        if defaults:
+            _d = _d.flat().merge_with(slovar(defaults).subset(fields).flat())
+
         return _d.unflat()
 
     def get_by_prefix(self, prefix):
@@ -254,7 +258,7 @@ class slovar(dict):
 
         return _d.unflat()
 
-    def subset(self, keys):
+    def subset(self, keys, defaults=None):
 
         if keys is None:
             return self
@@ -286,6 +290,9 @@ class slovar(dict):
         elif exclude:
             _d = self.__class__([[k, v] for (k, v) in self.items()
                           if k not in exclude])
+
+        if defaults:
+            _d = _d.flat().merge_with(slovar(defaults).subset(keys).flat()).unflat()
 
         return _d
 
