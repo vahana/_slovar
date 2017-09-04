@@ -110,7 +110,7 @@ class slovar(dict):
     def __getitem__(self, key):
         return super(slovar, self).__getitem__(key)
 
-    def to_dict(self, fields):
+    def to_dict(self, fields=None):
         return self.extract(fields)
 
     def to_slovar(self):
