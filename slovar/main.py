@@ -87,6 +87,9 @@ class slovar(dict):
     def raise_getattr_exc(self, error):
         raise AttributeError(error)
 
+    def raise_value_exc(self, error):
+        raise ValueError(error)
+
     def __setattr__(self, key, val):
         if isinstance(val, dict) and not isinstance(val, slovar):
             val = self.__class__(val)
@@ -208,12 +211,12 @@ class slovar(dict):
                     try:
                         method = getattr(_type, tr)
                         if not callable(method):
-                            raise ValueError(
+                            self.raise_value_exc(
                                 '`%s` is not a callable for type `%s`'
                                     % (tr, _type))
                         _d[key] = method(_d[key])
                     except AttributeError as e:
-                        raise ValueError(
+                        self.raise_value_exc(
                                 'type `%s` does not have a method `%s`'
                                     % (_type, tr))
 
@@ -270,7 +273,7 @@ class slovar(dict):
         _d = self.__class__()
 
         if only and exclude:
-            raise ValueError(
+            self.raise_value_exc(
                 'Can only supply either positive or negative keys,'
                 ' but not both'
             )
@@ -384,7 +387,7 @@ class slovar(dict):
                     error_msg('Missing key: `%s`' % key)
 
         if (errors and _all) or (not _all and len(errors) >= len(keys)):
-            raise ValueError('.'.join(errors))
+            self.raise_value_exc('.'.join(errors))
 
         return True
 
@@ -453,7 +456,7 @@ class slovar(dict):
                 else:
                     _lst.append(val)
             else:
-                raise ValueError('`%s` is not a list' % key)
+                self.raise_value_exc('`%s` is not a list' % key)
 
             return _lst
 
@@ -502,7 +505,7 @@ class slovar(dict):
                 try:
                     _lst = list(set(_lst))
                 except TypeError as e:
-                    raise ValueError('items in `%s` list not hashable. missed the set_key ?'\
+                    self.raise_value_exc('items in `%s` list not hashable. missed the set_key ?'\
                                      % (key))
 
             return _lst

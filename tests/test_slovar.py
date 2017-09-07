@@ -165,9 +165,15 @@ class TestSlovar():
                 raise NotImplementedError(error)
 
         d = Slovarik(a=1)
-        try:
+        with pytest.raises(NotImplementedError):
             d.b
-        except NotImplementedError:
-            pass
-        else:
-            raise Exception('Expected an exception')
+
+    def test_value_exc(self):
+        class Slovarik(slovar):
+            def raise_value_exc(self, error):
+                raise NotImplementedError(error)
+
+        d = Slovarik(a=1)
+        with pytest.raises(NotImplementedError):
+            d.has('a', None)
+            d.subset('-a,b')
