@@ -167,11 +167,17 @@ class TestSlovarComplex(object):
         d3 = d1.update_with({'x':1}, append_to='x')
         assert 'x' in d3
 
-    @pytest.mark.skip('this is a bug. fix and enable.')
-    def test_update_with_append_to_set2():
+    # @pytest.mark.skip('this is a bug. fix and enable.')
+    def test_update_with_append_to_set2(self):
+        d1 = slovar(
+            a = [],
+            aa = [1],
+            aaa = [{'b':1, 'c':2}]
+        )
+
         d3 = d1.update_with({'aaa':{'b': 1, 'c':11, 'd':33}}, append_to_set=['aaa:b'])
-        assert d3.aaa[0].c == 11
-        assert d3.aaa[0].d == 33
+        assert d3.aaa[0]['c'] == 11
+        assert d3.aaa[0]['d'] == 33
 
     def test_update_with_overwrite(self):
         d1 = slovar(

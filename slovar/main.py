@@ -446,22 +446,19 @@ class slovar(dict):
         append_to_set = process_append_to_param(append_to_set)
         self_dict = self.copy()
 
-        def _build_list(key, val):
-            #if key is missing, create empty list
-            _lst = self_dict.get(key, [])
-
+        def _build_list(_lst, new_val):
             if isinstance(_lst, list):
-                if isinstance(val, list):
-                    _lst.extend(val)
+                if isinstance(new_val, list):
+                    _lst.extend(new_val)
                 else:
-                    _lst.append(val)
+                    _lst.append(new_val)
             else:
                 self.raise_value_exc('`%s` is not a list' % key)
 
             return _lst
 
         def _append_to(key, val):
-            _lst = _build_list(key, val)
+            _lst = _build_list(self_dict.get(key, []), val)
             sort_key = append_to.get(key)
             sort_method = None
             reverse = False
@@ -481,7 +478,7 @@ class slovar(dict):
             return _lst
 
         def _append_to_set(key, val):
-            _lst = _build_list(key, val)
+            new_lst = _build_list(self_dict.get(key, []), val)
             set_key = append_to_set.get(key)
 
             #ie append_to_set=people:full_name. `full_name` is a set_key
@@ -489,7 +486,10 @@ class slovar(dict):
             if set_key:
                 _uniques = []
                 _met = []
-                for each in _lst:
+
+                #reverse the list so new values overwrite old ones,
+                #since it was appended at the end
+                for each in reversed(new_lst):
                     # if there is not set_key in each, it must be treated as unique
                     if set_key not in each:
                         _uniques.append(each)
@@ -500,15 +500,15 @@ class slovar(dict):
                     _met.append(each[set_key])
                     _uniques.append(each)
 
-                _lst = _uniques
+                new_lst = _uniques
             else:
                 try:
-                    _lst = list(set(_lst))
+                    new_lst = list(set(new_lst))
                 except TypeError as e:
                     self.raise_value_exc('items in `%s` list not hashable. missed the set_key ?'\
                                      % (key))
 
-            return _lst
+            return new_lst
 
         for key, val in _dict.items():
             if key in append_to:
