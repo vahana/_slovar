@@ -206,6 +206,9 @@ class slovar(dict):
                         if _d[key]:
                             _d[key] = str2dt(_d[key])
                         continue
+                    elif tr.startswith('='):
+                        _d[key] = tr[1:]
+                        continue
 
                     _type = type(_d[key])
                     try:

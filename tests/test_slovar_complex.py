@@ -217,3 +217,7 @@ class TestSlovarComplex(object):
         assert d3.a.b.d == 2
         assert d3.a.b.c == 1
 
+    def test_extract_with_assignment(self):
+        assert slovar(a=1).extract('a:=2') == slovar(a='2')
+
+
