@@ -42,7 +42,7 @@ def str2dt(strdt, _raise=False):
         raise ValueError('Datetime string can not be empty or None')
 
     if isinstance(strdt, datetime):
-        return datetime
+        return strdt
 
     dt = str2rdt(strdt)
     if dt:
