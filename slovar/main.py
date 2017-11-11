@@ -429,7 +429,8 @@ class slovar(dict):
     def deep_update(self, _dict):
         return self.flat().update(_dict.flat()).unflat()
 
-    def update_with(self, _dict, overwrite=True, append_to=None, append_to_set=None):
+    def update_with(self, _dict, overwrite=True, append_to=None,
+                    append_to_set=None, flatten=False):
 
         def process_append_to_param(_lst):
             if isinstance(_lst, basestring):
@@ -460,7 +461,7 @@ class slovar(dict):
 
             return _lst
 
-        def _append_to(key, val):
+        def _append_to(self_dict, key, val):
             _lst = _build_list(self_dict.get(key, []), val)
             sort_key = append_to.get(key)
             sort_method = None
@@ -480,7 +481,7 @@ class slovar(dict):
 
             return _lst
 
-        def _append_to_set(key, val):
+        def _append_to_set(self_dict, key, val):
             new_lst = _build_list(self_dict.get(key, []), val)
             set_key = append_to_set.get(key)
 
@@ -513,13 +514,20 @@ class slovar(dict):
 
             return new_lst
 
+        if flatten:
+            self_dict = self_dict.flat()
+            _dict = _dict.flat()
+
         for key, val in _dict.items():
             if key in append_to:
-                self_dict[key] = _append_to(key, val)
+                self_dict[key] = _append_to(self_dict, key, val)
             elif key in append_to_set:
-                self_dict[key] = _append_to_set(key, val)
+                self_dict[key] = _append_to_set(self_dict, key, val)
             elif overwrite or key not in self_dict:
                 self_dict[key] = val
+
+        if flatten:
+            self_dict = self_dict.unflat()
 
         return self_dict
 

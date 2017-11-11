@@ -213,7 +213,7 @@ class TestSlovarComplex(object):
                     {'d': 2}}
         )
 
-        d3 = d1.flat().update_with(d2.flat()).unflat()
+        d3 = d1.update_with(d2, flatten=True)
         assert d3.a.b.d == 2
         assert d3.a.b.c == 1
 
