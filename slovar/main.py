@@ -4,6 +4,7 @@ from collections import OrderedDict
 from slovar.operations.strings import split_strip, str2dt
 from slovar.operations.dictionaries import flat, unflat, merge
 from slovar.operations.lists import process_fields
+import collections
 
 
 class slovar(dict):
@@ -52,7 +53,7 @@ class slovar(dict):
         flat_source = cls(source).flat()
         flat_source.update(source)
 
-        for key, val in flat_rules.items():
+        for key, val in list(flat_rules.items()):
             if not val: # if val in the rule is missing, use the key
                 val = key
 
@@ -118,7 +119,7 @@ class slovar(dict):
 
     def to_slovar(self):
         cls = self.__class__
-        for key, val in self.items():
+        for key, val in list(self.items()):
             if isinstance(val, dict):
                 self[key] = cls(val)
             if isinstance(val, list):
@@ -145,10 +146,10 @@ class slovar(dict):
                                 'show_as', 'show_as_r', 'transforms',
                                 'star'])
 
-        nested_keys = nested.keys()
+        nested_keys = list(nested.keys())
 
         def process_lists(flat_d):
-            for nkey, nval in nested.items():
+            for nkey, nval in list(nested.items()):
                 if '..' in nkey:
                     pref, suf = nkey.split('..', 1)
                     _lst = []
@@ -174,24 +175,24 @@ class slovar(dict):
             flat_d = self.flat(keep_lists=0)
             process_lists(flat_d)
             flat_d = flat_d.subset(nested_keys)
-            _d = _d.remove(nested.values()).update(flat_d)
+            _d = _d.remove(list(nested.values())).update(flat_d)
 
-        for new_key, key in show_as_r.items():
+        for new_key, key in list(show_as_r.items()):
             if key in _d:
                 _d.merge(self.__class__({new_key:_d.get(key)}))
 
         #remove old keys
-        for _k in show_as_r.values():
+        for _k in list(show_as_r.values()):
             _d.pop(_k, None)
 
-        for key, trs in trans.items():
+        for key, trs in list(trans.items()):
             if key in _d:
                 for tr in trs:
                     if tr == 'str':
-                        _d[key] = unicode(_d[key])
+                        _d[key] = str(_d[key])
                         continue
                     elif tr == 'unicode':
-                        _d[key] = unicode(_d[key])
+                        _d[key] = str(_d[key])
                         continue
                     elif tr == 'int':
                         _d[key] = int(_d[key]) if _d[key] else _d[key]
@@ -213,7 +214,7 @@ class slovar(dict):
                     _type = type(_d[key])
                     try:
                         method = getattr(_type, tr)
-                        if not callable(method):
+                        if not isinstance(method, collections.Callable):
                             self.raise_value_exc(
                                 '`%s` is not a callable for type `%s`'
                                     % (tr, _type))
@@ -242,7 +243,7 @@ class slovar(dict):
             prefixes = prefix
 
         _d = self.__class__()
-        for k, v in self.items():
+        for k, v in list(self.items()):
             for pref in prefixes:
                 _pref = pref[:-1]
 
@@ -287,14 +288,14 @@ class slovar(dict):
 
             if exact:
                 _d = self.__class__(
-                    [[k, v] for (k, v) in self.items() if k in exact]
+                    [[k, v] for (k, v) in list(self.items()) if k in exact]
                 )
 
             if prefixed:
                 _d = _d.update_with(self.get_by_prefix(prefixed))
 
         elif exclude:
-            _d = self.__class__([[k, v] for (k, v) in self.items()
+            _d = self.__class__([[k, v] for (k, v) in list(self.items())
                           if k not in exclude])
 
         if defaults:
@@ -303,7 +304,7 @@ class slovar(dict):
         return _d
 
     def remove(self, keys, flat=False):
-        if isinstance(keys, basestring):
+        if isinstance(keys, str):
             keys = [keys]
 
         _self = self.flat() if flat else self.copy()
@@ -324,7 +325,7 @@ class slovar(dict):
         if not isinstance(vals, list):
             vals = [vals]
 
-        for k, v in self.items():
+        for k, v in list(self.items()):
             if v in vals:
                 self.pop(k)
         return self
@@ -334,7 +335,7 @@ class slovar(dict):
             prefix += sep
 
         _dict = self.__class__(defaults)
-        for key, val in self.items():
+        for key, val in list(self.items()):
             if key.startswith(prefix):
                 _k = key.partition(prefix)[-1]
                 _dict[_k] = val
@@ -343,12 +344,12 @@ class slovar(dict):
     def mget(self, keys):
         return [self[e] for e in split_strip(keys) if e in self]
 
-    def has(self, keys, check_type=basestring,
+    def has(self, keys, check_type=str,
             err='', _all=True, allow_missing=False,
             allowed_values=[]):
         errors = []
 
-        if isinstance(keys, basestring):
+        if isinstance(keys, str):
             keys = [keys]
 
         self_flat = self.flat().update(self) # update with self to include high level keys too
@@ -376,7 +377,7 @@ class slovar(dict):
         for key in keys:
             if key in self_flat:
                 if check_type and not isinstance(self_flat[key], check_type):
-                    error_msg(u'`%s` must be type `%s`, got `%s` instead'\
+                    error_msg('`%s` must be type `%s`, got `%s` instead'\
                                           % (key, check_type.__name__,
                                              type(self_flat[key]).__name__))
 
@@ -398,7 +399,7 @@ class slovar(dict):
         _d = self.__class__()
         flat_dict = self.flat()
 
-        for path, val in flat_dict.items():
+        for path, val in list(flat_dict.items()):
             if path in rules:
                 _d.merge(slovar.from_dotted(rules[path], val))
 
@@ -433,7 +434,7 @@ class slovar(dict):
                     append_to_set=None, flatten=False):
 
         def process_append_to_param(_lst):
-            if isinstance(_lst, basestring):
+            if isinstance(_lst, str):
                 _lst = [_lst]
 
             if not _lst:
@@ -518,7 +519,7 @@ class slovar(dict):
             self_dict = self_dict.flat()
             _dict = _dict.flat()
 
-        for key, val in _dict.items():
+        for key, val in list(_dict.items()):
             if key in append_to:
                 self_dict[key] = _append_to(self_dict, key, val)
             elif key in append_to_set:
@@ -536,7 +537,7 @@ class slovar(dict):
 
     def contains(self, other, exclude=None):
         other_ = other.subset(exclude)
-        return not other_ or self.subset(other_.keys()) == other_
+        return not other_ or self.subset(list(other_.keys())) == other_
 
     def pop_many(self, keys):
         poped = self.__class__()

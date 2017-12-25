@@ -1,5 +1,6 @@
 from datetime import datetime
 import pytest
+
 from slovar import slovar
 from slovar.operations.dictionaries import merge
 from slovar.operations.lists import expand_list
@@ -81,7 +82,7 @@ class TestSlovar():
         assert dset == dset_copy
 
         dset.pop_by_values(2)
-        assert dset.keys() == ['a']
+        assert list(dset.keys()) == ['a']
         assert dset != dset_copy
 
     def test_merge(self):
@@ -134,7 +135,7 @@ class TestSlovar():
     def test_has(self):
         d1 = slovar(a=1)
         with pytest.raises(ValueError):
-            d1.has('a', check_type=basestring)
+            d1.has('a', check_type=str)
 
         assert d1.has('a', check_type=int) == True
 

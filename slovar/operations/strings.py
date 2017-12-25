@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-import dateutil
+from dateutil import parser as dt_parser, relativedelta as dt_relativedelta
 import logging
 
 log = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ def split_strip(_str, on=',', remove_empty=True):
     lst = (_str if isinstance(_str, list) else _str.split(on))
     lst = [e.strip() for e in lst]
     if remove_empty:
-        lst = filter(bool, lst)
+        lst = list(filter(bool, lst))
     return lst
 
 
@@ -34,7 +34,7 @@ def str2rdt(strdt):
         number = int(m.group(1))
         word = m.group(4)
         if word in matches:
-            return dateutil.relativedelta.relativedelta(**{matches[word]:number})
+            return dt_relativedelta.relativedelta(**{matches[word]:number})
 
 
 def str2dt(strdt, _raise=False):
@@ -49,7 +49,7 @@ def str2dt(strdt, _raise=False):
         return datetime.utcnow()+dt
 
     try:
-        return dateutil.parser.parse(strdt)
+        return dt_parser.parse(strdt)
     except ValueError as e:
         msg = 'Datetime string `%s` not recognized as datetime. Did you miss +- signs for relative dates?' % strdt
         if _raise:

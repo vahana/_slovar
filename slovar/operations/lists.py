@@ -5,13 +5,13 @@ def expand_list(param):
     _new = []
     if isinstance(param, (list, set)):
         for each in param:
-            if isinstance(each, basestring) and each.find(',') != -1:
+            if isinstance(each, str) and each.find(',') != -1:
                 _new.extend(split_strip(each))
             elif isinstance(each, (list, set)):
                 _new.extend(each)
             else:
                 _new.append(each)
-    elif isinstance(param, basestring) and param.find(',') != -1:
+    elif isinstance(param, str) and param.find(',') != -1:
 
         _new = split_strip(param)
 
@@ -31,7 +31,7 @@ def process_fields(fields, parse=True):
 
     star = False
 
-    if isinstance(fields, basestring):
+    if isinstance(fields, str):
         fields = split_strip(fields)
 
     for field in expand_list(fields):
