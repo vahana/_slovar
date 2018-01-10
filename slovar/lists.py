@@ -1,4 +1,4 @@
-from slovar.operations.strings import split_strip
+from slovar.strings import split_strip
 
 
 def expand_list(param):

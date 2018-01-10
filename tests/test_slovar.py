@@ -2,8 +2,8 @@ from datetime import datetime
 import pytest
 
 from slovar import slovar
-from slovar.operations.dictionaries import merge
-from slovar.operations.lists import expand_list
+from slovar.dictionaries import merge
+from slovar.lists import expand_list
 
 class TestSlovar():
     def test(self):
