@@ -83,7 +83,7 @@ class slovar(dict):
         try:
             return self[key]
         except KeyError as e:
-            self.raise_getattr_exc(e)
+            self.raise_getattr_exc(e.args)
 
     def raise_getattr_exc(self, error):
         raise AttributeError(error)
