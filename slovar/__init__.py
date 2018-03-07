@@ -562,3 +562,15 @@ class slovar(dict):
                     self_f[key] = '******'
 
         return self_f.unflat()
+
+    def any_key(self, keys):
+        if not keys:
+            return False
+        return any(name in self for name in keys)
+
+    def all_keys(self, keys):
+        if not keys:
+            return False
+        return all(name in self for name in keys)
+
+
