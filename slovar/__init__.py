@@ -184,6 +184,39 @@ class slovar(dict):
         for _k in list(show_as_r.values()):
             _d.pop(_k, None)
 
+
+        def tcast(val, tr):
+            if tr == 'str':
+                val = str(val)
+            elif tr == 'unicode':
+                val = str(val)
+            elif tr == 'int':
+                val = int(val) if val else val
+            elif tr == 'float':
+                val = float(val) if val else val
+            elif tr == 'flat' and isinstance(val, slovar):
+                val = val.flat()
+            elif tr == 'dt':
+                if val:
+                    val = str2dt(val)
+            elif tr.startswith('='):
+                val = tr[1:]
+            else:
+                _type = type(val)
+                try:
+                    method = getattr(_type, tr)
+                    if not isinstance(method, collections.Callable):
+                        self.raise_value_exc(
+                            '`%s` is not a callable for type `%s`'
+                                % (tr, _type))
+                    val = method(val)
+                except AttributeError as e:
+                    self.raise_value_exc(
+                            'type `%s` does not have a method `%s`'
+                                % (_type, tr))
+
+            return val
+
         for key, trs in list(trans.items()):
             if key in _d:
                 safe_op = False
@@ -192,41 +225,7 @@ class slovar(dict):
                         if tr == 'safe':
                             safe_op = True
                             continue
-                        elif tr == 'str':
-                            _d[key] = str(_d[key])
-                            continue
-                        elif tr == 'unicode':
-                            _d[key] = str(_d[key])
-                            continue
-                        elif tr == 'int':
-                            _d[key] = int(_d[key]) if _d[key] else _d[key]
-                            continue
-                        elif tr == 'float':
-                            _d[key] = float(_d[key]) if _d[key] else _d[key]
-                            continue
-                        elif tr == 'flat' and isinstance(_d[key], slovar):
-                            _d[key] = _d[key].flat()
-                            continue
-                        elif tr == 'dt':
-                            if _d[key]:
-                                _d[key] = str2dt(_d[key])
-                            continue
-                        elif tr.startswith('='):
-                            _d[key] = tr[1:]
-                            continue
-
-                        _type = type(_d[key])
-                        try:
-                            method = getattr(_type, tr)
-                            if not isinstance(method, collections.Callable):
-                                self.raise_value_exc(
-                                    '`%s` is not a callable for type `%s`'
-                                        % (tr, _type))
-                            _d[key] = method(_d[key])
-                        except AttributeError as e:
-                            self.raise_value_exc(
-                                    'type `%s` does not have a method `%s`'
-                                        % (_type, tr))
+                        _d[key] = tcast(_d[key], tr)
                 except:
                     import sys
                     log.error('typecast failed for key=`%s`, value=`%s`: %s' %
@@ -236,7 +235,8 @@ class slovar(dict):
             else:
                 for tr in trs:
                     if tr.startswith('='):
-                        _d[key] = tr.partition('=')[2]
+                        val, _, tr = tr[1:].partition(':')
+                        _d[key] = tcast(val, tr) if tr else val
                         continue
 
 
