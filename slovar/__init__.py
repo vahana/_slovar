@@ -218,13 +218,13 @@ class slovar(dict):
             return val
 
         for key, trs in list(trans.items()):
+            safe_op = 'safe' in trs
+            if safe_op:
+                trs.remove('safe')
+
             if key in _d:
-                safe_op = False
                 try:
                     for tr in trs:
-                        if tr == 'safe':
-                            safe_op = True
-                            continue
                         _d[key] = tcast(_d[key], tr)
                 except:
                     import sys
