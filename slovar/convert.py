@@ -1,7 +1,7 @@
 import six
-# from prf.utils.utils import split_strip, str2dt, qs2dict
-from slovar.strings import split_strip
-# from prf.utils.errors import DKeyError,DValueError
+
+from slovar.strings import split_strip, str2dt, str2rdt
+from slovar import exceptions as exc
 
 
 def parametrize(func):
@@ -18,7 +18,7 @@ def parametrize(func):
                 value = dset[name]
             except KeyError:
                 if not allow_missing:
-                    raise KeyError("Missing '%s'" % name)
+                    raise exc.SlovarKeyError("Missing '%s'" % name)
                 else:
                     return
         else:
@@ -29,14 +29,14 @@ def parametrize(func):
             return
 
         if raise_on_empty and not value:
-            raise ValueError("'%s' can not be empty" % name)
+            raise exc.SlovarValueError("'%s' can not be empty" % name)
 
         try:
             result = func(dset, value, **kw)
         except:
             if _raise:
                 import sys
-                raise ValueError(sys.exc_info()[1])
+                raise exc.SlovarValueError(sys.exc_info()[1])
             else:
                 if default is None:
                     return
@@ -72,7 +72,7 @@ def asbool(dset, value):
     elif lvalue in falsey:
         return False
     else:
-        raise ValueError('Dont know how to convert `%s` to bool' % value)
+        raise exc.SlovarValueError('Dont know how to convert `%s` to bool' % value)
 
 
 @parametrize
@@ -124,7 +124,7 @@ def asrange(dset, value, typecast=str, sep='-'):
     elif isinstance(value, str):
         rng = split_strip(value, sep)
         if len(rng) !=2:
-            raise ValueError('bad range')
+            raise exc.SlovarValueError('bad range')
         list_ = list(range(int(rng[0]), int(rng[1])+1))
 
     else:
@@ -142,7 +142,7 @@ def asdict(dset, name, _type=None, _set=False, pop=False):
     try:
         value = dset[name]
     except KeyError:
-        raise KeyError("Missing '%s'" % name)
+        raise exc.SlovarKeyError("Missing '%s'" % name)
 
     if _type is None:
         _type = lambda t: t
@@ -170,10 +170,6 @@ def asdict(dset, name, _type=None, _set=False, pop=False):
     return _dict
 
 
-# @parametrize
-# def asdt(dset, value):
-#     return str2dt(value)
-
-# @parametrize
-# def asqs(dset, value):
-#     return qs2dict(value)
+@parametrize
+def asdt(dset, value):
+    return str2dt(value)

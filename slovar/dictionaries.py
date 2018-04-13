@@ -1,5 +1,4 @@
-# from prf.utils.utils import json_dumps
-# from prf.utils.errors import DKeyError, DValueError
+import json
 
 from slovar import slovar
 from slovar.convert import *
@@ -35,7 +34,7 @@ class dictset(slovar):
         return asrange(self, *arg, **kw)
 
     def asqs(self, *arg, **kw):
-        return asqs(self, *arg, **kw)
+        raise NotImplementedError
 
     def json(self):
         return json_dumps(self)
@@ -44,14 +43,6 @@ class dictset(slovar):
         if isinstance(val, dict):
             val = dictset(val)
         self[key] = val
-
-
-# class dkdict(dictset):
-#     def raise_getattr_exc(self, error):
-#         raise DKeyError(error)
-
-#     def raise_value_exc(self, error):
-#         raise DValueError(error)
 
 
 class JSONEncoder(json.JSONEncoder):
