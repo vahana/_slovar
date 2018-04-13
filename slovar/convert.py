@@ -11,7 +11,7 @@ def parametrize(func):
                             _raise=True, **kw):
 
         if pop_empty:
-            allow_missing=True
+            allow_missing = True
 
         if default is None:
             try:
@@ -33,7 +33,7 @@ def parametrize(func):
 
         try:
             result = func(dset, value, **kw)
-        except:
+        except Exception:
             if _raise:
                 import sys
                 raise exc.SlovarValueError(sys.exc_info()[1])
@@ -72,7 +72,8 @@ def asbool(dset, value):
     elif lvalue in falsey:
         return False
     else:
-        raise exc.SlovarValueError('Dont know how to convert `%s` to bool' % value)
+        raise exc.SlovarValueError(
+                'Dont know how to convert `%s` to bool' % value)
 
 
 @parametrize
@@ -123,7 +124,7 @@ def asrange(dset, value, typecast=str, sep='-'):
         list_ = value
     elif isinstance(value, str):
         rng = split_strip(value, sep)
-        if len(rng) !=2:
+        if len(rng) != 2:
             raise exc.SlovarValueError('bad range')
         list_ = list(range(int(rng[0]), int(rng[1])+1))
 
