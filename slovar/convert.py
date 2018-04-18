@@ -1,4 +1,5 @@
 import six
+from urllib.parse import parse_qsl
 
 from slovar.strings import split_strip, str2dt, str2rdt
 from slovar import exceptions as exc
@@ -174,3 +175,13 @@ def asdict(dset, name, _type=None, _set=False, pop=False):
 @parametrize
 def asdt(dset, value):
     return str2dt(value)
+
+
+def qs2dict(qs):
+    from slovar.dictset import dictset
+    return dictset(parse_qsl(qs, keep_blank_values=True))
+
+
+@parametrize
+def asqs(dset, value):
+    return qs2dict(value)
