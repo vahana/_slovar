@@ -1,8 +1,9 @@
 from itertools import groupby
 import collections
 
-# from slovar.convert import *
+from slovar.convert import *
 from slovar.dictionaries import *
+from slovar.json import json_dumps
 from slovar.lists import *
 from slovar.strings import *
 
@@ -92,7 +93,7 @@ class slovar(dict):
         raise ValueError(error)
 
     def __setattr__(self, key, val):
-        if isinstance(val, dict) and not isinstance(val, slovar):
+        if isinstance(val, dict) and not isinstance(val, self.__class__):
             val = self.__class__(val)
         self[key] = val
 
@@ -573,3 +574,36 @@ class slovar(dict):
         if not keys:
             return False
         return all(name in self for name in keys)
+
+    def asbool(self, *arg, **kw):
+        return asbool(self, *arg, **kw)
+
+    def aslist(self, *arg, **kw):
+        return aslist(self, *arg, **kw)
+
+    def asset(self, *arg, **kw):
+        return asset(self, *arg, **kw)
+
+    def asint(self, *arg, **kw):
+        return asint(self, *arg, **kw)
+
+    def asfloat(self, *arg, **kw):
+        return asfloat(self, *arg, **kw)
+
+    def asdict(self, *arg, **kw):
+        return asdict(self, *arg, **kw)
+
+    def asdt(self, *arg, **kw):
+        return asdt(self, *arg, **kw)
+
+    def asstr(self, *arg, **kw):
+        return asstr(self, *arg, **kw)
+
+    def asrange(self, *arg, **kw):
+        return asrange(self, *arg, **kw)
+
+    def asqs(self, *arg, **kw):
+        return asqs(self, *arg, **kw)
+
+    def json(self):
+        return json_dumps(self)
