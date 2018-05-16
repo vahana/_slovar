@@ -186,6 +186,9 @@ class slovar(dict):
 
 
         def tcast(val, tr):
+            if val is None:
+                return val
+
             if tr == 'str':
                 val = str(val)
             elif tr == 'unicode':
