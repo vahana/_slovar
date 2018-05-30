@@ -185,12 +185,12 @@ class slovar(dict):
 
         for new_key, key in list(show_as_r.items()):
             if key in _d:
-                _d.merge(self.__class__({new_key:_d.get(key)}))
+                #reverse merge to keep all show_as values and merge the rest
+                _d = self.__class__({new_key:_d.get(key)}).merge(_d)
 
         #remove old keys
         for _k in list(show_as_r.values()):
             _d.pop(_k, None)
-
 
         def tcast(val, tr):
             if val is None and not TCAST_NONE:
