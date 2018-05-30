@@ -1,11 +1,16 @@
-from itertools import groupby
 import collections
+import logging
+from itertools import groupby
 
 from slovar.convert import *
 from slovar.dictionaries import *
 from slovar.json import json_dumps
 from slovar.lists import *
 from slovar.strings import *
+
+TCAST_NONE = True
+
+log = logging.getLogger(__name__)
 
 
 class slovar(dict):
@@ -188,12 +193,10 @@ class slovar(dict):
             _d.pop(_k, None)
 
         def tcast(val, tr):
-            if val is None:
+            if val is None and not TCAST_NONE:
+                log.debug('extracted key %r is None' % key)
                 return val
-
-            if tr == 'str':
-                val = str(val)
-            elif tr == 'unicode':
+            if tr in ('str', 'unicode'):
                 val = str(val)
             elif tr == 'int':
                 val = int(val) if val else val
