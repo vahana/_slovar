@@ -1,12 +1,16 @@
 import logging
-
 from itertools import groupby
 import collections
+import logging
+from itertools import groupby
 
+from slovar.convert import *
 from slovar.dictionaries import *
+from slovar.json import json_dumps
 from slovar.lists import *
 from slovar.strings import *
 
+TCAST_NONE = True
 log = logging.getLogger(__name__)
 
 class slovar(dict):
@@ -65,7 +69,7 @@ class slovar(dict):
         raise ValueError(error)
 
     def __setattr__(self, key, val):
-        if isinstance(val, dict) and not isinstance(val, slovar):
+        if isinstance(val, dict) and not isinstance(val, self.__class__):
             val = self.__class__(val)
         self[key] = val
 
@@ -157,14 +161,13 @@ class slovar(dict):
             _d.pop(_k, None)
 
         def tcast(val, tr):
-            if val is None:
+            if val is None and not TCAST_NONE:
+                log.debug('extracted key %r is None' % key)
                 return val
             if tr == 'safe':
                 return val
 
-            if tr == 'str':
-                val = str(val)
-            elif tr == 'unicode':
+            if tr in ('str', 'unicode'):
                 val = str(val)
             elif tr == 'int':
                 val = int(val) if val else val
@@ -520,4 +523,35 @@ class slovar(dict):
             return False
         return all(name in self for name in keys)
 
+    def asbool(self, *arg, **kw):
+        return asbool(self, *arg, **kw)
 
+    def aslist(self, *arg, **kw):
+        return aslist(self, *arg, **kw)
+
+    def asset(self, *arg, **kw):
+        return asset(self, *arg, **kw)
+
+    def asint(self, *arg, **kw):
+        return asint(self, *arg, **kw)
+
+    def asfloat(self, *arg, **kw):
+        return asfloat(self, *arg, **kw)
+
+    def asdict(self, *arg, **kw):
+        return asdict(self, *arg, **kw)
+
+    def asdt(self, *arg, **kw):
+        return asdt(self, *arg, **kw)
+
+    def asstr(self, *arg, **kw):
+        return asstr(self, *arg, **kw)
+
+    def asrange(self, *arg, **kw):
+        return asrange(self, *arg, **kw)
+
+    def asqs(self, *arg, **kw):
+        return asqs(self, *arg, **kw)
+
+    def json(self):
+        return json_dumps(self)
