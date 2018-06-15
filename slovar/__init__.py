@@ -1,3 +1,5 @@
+import logging
+
 from itertools import groupby
 import collections
 
@@ -5,6 +7,7 @@ from slovar.dictionaries import *
 from slovar.lists import *
 from slovar.strings import *
 
+log = logging.getLogger(__name__)
 
 class slovar(dict):
 
@@ -42,35 +45,6 @@ class slovar(dict):
             return _lst
         else:
             return cls({key: cls.from_dotted(sufix, val)})
-
-    @classmethod
-    def build_from(cls, source, rules, allow_empty=True,
-                    allow_missing=False, inverse=False):
-        _d = cls()
-
-        flat_rules = cls(rules).flat()
-        flat_source = cls(source).flat()
-        flat_source.update(source)
-
-        for key, val in list(flat_rules.items()):
-            if not val: # if val in the rule is missing, use the key
-                val = key
-
-            if inverse:
-                key,val = val,key # flip em
-
-            if key.endswith('.'):
-                _val = flat_source.get_tree(key)
-            else:
-                if allow_missing:
-                    _val = flat_source.get(key, key)
-                else:
-                    _val = flat_source[key]
-
-            if _val != "" or allow_empty:
-                _d[val] = _val
-
-        return _d.unflat()
 
     def __init__(self, *arg, **kw):
         super(slovar, self).__init__(*arg, **kw)
@@ -139,10 +113,10 @@ class slovar(dict):
         if not fields:
             return self
 
-        only, exclude, nested, show_as, show_as_r, trans, star =\
+        only, exclude, nested, show_as, show_as_r, trans, assignments, star =\
                 process_fields(fields).mget(
                                ['only','exclude', 'nested',
-                                'show_as', 'show_as_r', 'transforms',
+                                'show_as', 'show_as_r', 'transforms', 'assignments',
                                 'star'])
 
         nested_keys = list(nested.keys())
@@ -155,15 +129,12 @@ class slovar(dict):
 
                     for ix in range(len(_d.get(nval, []))):
                         kk = '%s.%s.%s'%(pref,ix,suf)
-                        _lst.append(flat_d.subset(kk))
+                        _lst.append(flat_d.get(kk))
                         ix+=1
 
-                    new_key = '%s.%s'%(pref,suf)
+                    new_key = show_as.get(nkey,'%s.%s'%(pref,suf))
                     nested_keys.append(new_key)
                     flat_d[new_key] = _lst
-
-                    if nkey in show_as:
-                        show_as[new_key] = show_as.pop(nkey)
 
         if star:
             _d = self
@@ -188,6 +159,8 @@ class slovar(dict):
         def tcast(val, tr):
             if val is None:
                 return val
+            if tr == 'safe':
+                return val
 
             if tr == 'str':
                 val = str(val)
@@ -202,46 +175,36 @@ class slovar(dict):
             elif tr == 'dt':
                 if val:
                     val = str2dt(val)
-            elif tr.startswith('='):
-                val = tr[1:]
             else:
                 _type = type(val)
                 try:
                     method = getattr(_type, tr)
                     if not isinstance(method, collections.Callable):
-                        self.raise_value_exc(
-                            '`%s` is not a callable for type `%s`'
-                                % (tr, _type))
+                        self.raise_value_exc('`%s` is not a callable for type `%s`' % (tr, _type))
                     val = method(val)
                 except AttributeError as e:
-                    self.raise_value_exc(
-                            'type `%s` does not have a method `%s`'
-                                % (_type, tr))
+                    self.raise_value_exc('type `%s` does not have a method `%s`' % (_type, tr))
 
             return val
 
+        processed_trs = []
         for key, trs in list(trans.items()):
-            safe_op = 'safe' in trs
-            if safe_op:
-                trs.remove('safe')
-
             if key in _d:
                 try:
                     for tr in trs:
                         _d[key] = tcast(_d[key], tr)
+                        processed_trs.append(tr)
                 except:
                     import sys
                     log.error('typecast failed for key=`%s`, value=`%s`: %s' %
                                                 (key, _d[key], sys.exc_info()[1]))
-                    if not safe_op:
-                        raise
-            else:
-                for tr in trs:
-                    if tr.startswith('='):
-                        val, _, tr = tr[1:].partition(':')
-                        _d[key] = tcast(val, tr) if tr else val
-                        continue
 
+                    if 'safe' not in processed_trs:
+                        raise
+
+        for kk, vv in assignments.items():
+            val, _, tr = vv.partition(':')
+            _d[kk] = tcast(val, tr) if tr else val
 
         if defaults:
             _d = _d.flat().merge_with(slovar(defaults).flat())
@@ -429,18 +392,8 @@ class slovar(dict):
             self.merge(cls.from_dotted(name, val))
         return val
 
-    def get_first(self, keys):
-        for key in keys:
-            if key in self:
-                return self[key]
-
-        raise KeyError('Neither of `%s` keys found' % keys)
-
     def fget(self, key, *arg, **kw):
         return self.flat().get(key, *arg, **kw)
-
-    def deep_update(self, _dict):
-        return self.flat().update(_dict.flat()).unflat()
 
     def update_with(self, _dict, overwrite=True, append_to=None,
                     append_to_set=None, flatten=False):
@@ -556,15 +509,6 @@ class slovar(dict):
         for key in keys:
             poped[key] = self.pop(key, None)
         return poped
-
-    def sensor(self, patterns):
-        self_f = self.flat()
-        for key in self_f:
-            for each in patterns:
-                if key.endswith(each):
-                    self_f[key] = '******'
-
-        return self_f.unflat()
 
     def any_key(self, keys):
         if not keys:

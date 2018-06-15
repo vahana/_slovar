@@ -1,7 +1,7 @@
 import logging
 
-
 log = logging.getLogger(__name__)
+
 
 def resolve(name, module=None):
     """Resole dotted name to python module

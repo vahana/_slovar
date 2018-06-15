@@ -28,6 +28,7 @@ def process_fields(fields, parse=True):
     show_as = {}
     show_as_r = {}
     transforms = {}
+    assignments = {}
 
     star = False
 
@@ -43,6 +44,11 @@ def process_fields(fields, parse=True):
 
         if '*' == field:
             star = True
+            continue
+
+        if ':=' in field:
+            kk, _, val = field.partition(':=')
+            assignments[kk] = val
             continue
 
         field,_,trans = field.partition(':')
@@ -82,4 +88,5 @@ def process_fields(fields, parse=True):
              'show_as': show_as,
              'show_as_r': show_as_r,
              'transforms': transforms,
+             'assignments': assignments,
              'star': star})
