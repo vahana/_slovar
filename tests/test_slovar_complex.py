@@ -179,6 +179,21 @@ class TestSlovarComplex(object):
         assert d3.aaa[0]['c'] == 11
         assert d3.aaa[0]['d'] == 33
 
+    def test_update_with_append_to_set_order(self):
+        d1 = slovar(
+            a = [
+                dict(b = 10),
+                dict(b = 20),
+                dict(b = 30),
+            ]
+        )
+
+        d3 = d1.update_with(dict(a=[dict(b=5), dict(b=15)]), append_to_set='a:-b')
+        # assert d3.a == [{'b': 30}, {'b': 20}, {'b': 15}, {'b': 10}, {'b': 5}]
+
+        d3 = d1.update_with(dict(a=[dict(b=5), dict(b=15)]), append_to_set='a:b')
+        # assert d3.a == [{'b': 30}, {'b': 20}, {'b': 15}, {'b': 10}, {'b': 5}]
+
     def test_update_with_overwrite(self):
         d1 = slovar(
             a = {'b': 1},

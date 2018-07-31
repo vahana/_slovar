@@ -454,6 +454,12 @@ class slovar(dict):
             new_lst = _build_list(self_dict.get(key, []), val)
             set_key = append_to_set.get(key)
 
+            if set_key.startswith('-'):
+                reverse_order = True
+                set_key = set_key[1:]
+            else:
+                reverse_order = False
+
             #ie append_to_set=people:full_name. `full_name` is a set_key
             #this will mean make people unique for inner field `full_name`
             if set_key:
@@ -463,17 +469,13 @@ class slovar(dict):
                 #reverse the list so new values overwrite old ones,
                 #since it was appended at the end
                 for each in reversed(new_lst):
-                    # if there is not set_key in each, it must be treated as unique
-                    if set_key not in each:
-                        _uniques.append(each)
-                        continue
                     if each[set_key] in _met:
                         continue
 
                     _met.append(each[set_key])
                     _uniques.append(each)
 
-                new_lst = _uniques
+                new_lst = sorted(_uniques, key= lambda x: x[set_key], reverse=reverse_order)
             else:
                 try:
                     new_lst = list(set(new_lst))

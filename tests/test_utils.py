@@ -16,6 +16,6 @@ class TestUtils(object):
 
         import slovar
         assert maybe_dotted('slovar.utils') == slovar.utils
-        assert maybe_dotted('prf.utils:maybe_dotted') == slovar.utils.maybe_dotted
+        assert maybe_dotted('slovar.utils:maybe_dotted') == slovar.utils.maybe_dotted
 
         maybe_dotted('XYZ', throw=False)
