@@ -69,8 +69,9 @@ class slovar(dict):
         raise ValueError(error)
 
     def __setattr__(self, key, val):
-        if isinstance(val, dict) and not isinstance(val, self.__class__):
-            val = self.__class__(val)
+        # Why is this here ??
+        # if isinstance(val, dict) and not isinstance(val, self.__class__):
+        #     val = self.__class__(val)
         self[key] = val
 
     def __delattr__(self, key):
