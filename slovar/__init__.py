@@ -69,9 +69,9 @@ class slovar(dict):
         raise ValueError(error)
 
     def __setattr__(self, key, val):
-        # Why is this here ??
-        # if isinstance(val, dict) and not isinstance(val, self.__class__):
-        #     val = self.__class__(val)
+        #this makes a.b.c access work for nested slovars
+        if isinstance(val, dict) and not isinstance(val, self.__class__):
+            val = self.__class__(val)
         self[key] = val
 
     def __delattr__(self, key):
@@ -118,11 +118,10 @@ class slovar(dict):
         if not fields:
             return self
 
-        only, exclude, nested, show_as, show_as_r, trans, assignments, star =\
-                process_fields(fields).mget(
-                               ['only','exclude', 'nested',
-                                'show_as', 'show_as_r', 'transforms', 'assignments',
-                                'star'])
+        only, exclude, nested, show_as, show_as_r, trans, assignments, star, flats =\
+                process_fields(fields).mget(['only','exclude', 'nested',
+                                            'show_as', 'show_as_r', 'transforms', 'assignments',
+                                            'star', 'flats'])
 
         nested_keys = list(nested.keys())
 
@@ -161,7 +160,9 @@ class slovar(dict):
         for _k in list(show_as_r.values()):
             _d.pop(_k, None)
 
-        def tcast(val, tr):
+        def tcast(_dict, key, tr):
+            val = _dict[key]
+
             if val is None and not TCAST_NONE:
                 log.debug('extracted key %r is None' % key)
                 return val
@@ -196,7 +197,7 @@ class slovar(dict):
             if key in _d:
                 try:
                     for tr in trs:
-                        _d[key] = tcast(_d[key], tr)
+                        _d[key] = tcast(_d, key, tr)
                         processed_trs.append(tr)
                 except:
                     import sys
@@ -384,7 +385,20 @@ class slovar(dict):
 
         return _d
 
-    def flat(self, keep_lists=True):
+    def flat_keys(self, keys, keep_lists=True):
+        self_copy = self.copy()
+        for key in keys:
+            val = self_copy.extract(key)
+            if val and isinstance(val, dict):
+                self_copy.pop(key, None)
+                self_copy.update(val.flat(keep_lists=keep_lists))
+
+        return self_copy
+
+    def flat(self, keys=[], keep_lists=True):
+        if keys:
+            return self.flat_keys(keys, keep_lists=keep_lists)
+
         return self.__class__(flat(self, keep_lists=keep_lists))
 
     def unflat(self):
@@ -400,7 +414,7 @@ class slovar(dict):
         return self.flat().get(key, *arg, **kw)
 
     def update_with(self, _dict, overwrite=True, append_to=None,
-                    append_to_set=None, flatten=False):
+                    append_to_set=None, flatten=None):
 
         def process_append_to_param(_lst):
             if isinstance(_lst, str):
@@ -466,17 +480,23 @@ class slovar(dict):
             if set_key:
                 _uniques = []
                 _met = []
+                _not_found = []
 
                 #reverse the list so new values overwrite old ones,
                 #since it was appended at the end
                 for each in reversed(new_lst):
+                    if set_key not in each:
+                        _not_found.append(each)
+                        continue
+
                     if each[set_key] in _met:
                         continue
 
                     _met.append(each[set_key])
                     _uniques.append(each)
 
-                new_lst = sorted(_uniques, key= lambda x: x[set_key], reverse=reverse_order)
+                new_lst = sorted(_uniques, key= lambda x: x.get(set_key), reverse=reverse_order)
+                new_lst.extend(_not_found)
             else:
                 try:
                     new_lst = list(set(new_lst))
@@ -487,8 +507,9 @@ class slovar(dict):
             return new_lst
 
         if flatten:
-            self_dict = self_dict.flat()
-            _dict = _dict.flat()
+            flat_keys = flatten if isinstance(flatten, list) else None
+            self_dict = self_dict.flat(keys=flat_keys)
+            _dict = _dict.flat(keys=flat_keys)
 
         for key, val in list(_dict.items()):
             if key in append_to:

@@ -29,6 +29,7 @@ def process_fields(fields, parse=True):
     show_as_r = {}
     transforms = {}
     assignments = {}
+    flats = []
 
     star = False
 
@@ -53,6 +54,10 @@ def process_fields(fields, parse=True):
 
         field,_,trans = field.partition(':')
         trans = trans.split('|') if trans else []
+
+        if 'flat' in trans:
+            flats.append(field)
+            trans.remove('flat')
 
         if field[0] == '-':
             field = field[1:]
@@ -89,4 +94,5 @@ def process_fields(fields, parse=True):
              'show_as_r': show_as_r,
              'transforms': transforms,
              'assignments': assignments,
-             'star': star})
+             'star': star,
+             'flats': flats})

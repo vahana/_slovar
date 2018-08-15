@@ -39,10 +39,7 @@ def parametrize(func):
                 import sys
                 raise exc.SlovarValueError(sys.exc_info()[1])
             else:
-                if default is None:
-                    return
-                else:
-                    result = default
+                return
 
         if pop:
             dset.pop(name, None)

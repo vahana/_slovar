@@ -235,4 +235,35 @@ class TestSlovarComplex(object):
     def test_extract_with_assignment(self):
         assert slovar(a=1).extract('a:=2') == slovar(a='2')
 
+    def test_update_with_flat_keys(self):
+        d1 = slovar(
+            a = slovar(b=1),
+            c = slovar(d=2),
+            e = 3
+        )
+
+        assert d1.flat() == slovar({'a.b':1, 'c.d':2, 'e':3})
+        assert 'a' not in d1.flat()
+        assert d1.flat(['a']) == slovar({'a.b':1, 'c':slovar(d=2), 'e':3})
+        assert d1.flat(['a', 'e']) == slovar({'a.b':1, 'c':slovar(d=2), 'e':3})
+        assert d1.flat(['e']) == d1
+
+        d2 = d1.update_with(slovar(a=slovar(bb=4)))
+        assert 'b' not in d2.a
+        assert d2.a.bb == 4
+        assert d2.c.d == 2
+
+        d2 = d1.update_with(slovar(a=slovar(bb=4), c=slovar(ff=5)), flatten=True)
+        assert 'b' in d2.a
+        assert d2.a.bb == 4
+        assert 'd' in d2.c
+        assert d2.c.ff == 5
+
+        #flatten only `a` and `c` should be overwritten
+        d2 = d1.update_with(slovar(a=slovar(bb=4), c=slovar(ff=5)), flatten=['a'])
+        assert 'b' in d2.a
+        assert d2.a.bb == 4
+        assert 'd' not in d2.c
+        assert d2.c.ff == 5
+
 
