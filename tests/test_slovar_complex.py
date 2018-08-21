@@ -267,3 +267,17 @@ class TestSlovarComplex(object):
         assert d2.c.ff == 5
 
 
+    def test_extract_star(self):
+        d1 = slovar(
+            a = 1,
+            b = slovar(c = 2)
+        )
+
+        d2 = d1.extract('__as__d')
+        assert 'd' in d2
+        assert d2.d == d1
+        assert 'a' not in d2
+        assert 'b' not in d2
+        assert 'd.a' in d2.flat()
+        assert 'd.b.c' in d2.flat()
+

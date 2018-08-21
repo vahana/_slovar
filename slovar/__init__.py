@@ -118,10 +118,10 @@ class slovar(dict):
         if not fields:
             return self
 
-        only, exclude, nested, show_as, show_as_r, trans, assignments, star, flats =\
+        only, exclude, nested, show_as, show_as_r, trans, assignments, star, flats, envelop =\
                 process_fields(fields).mget(['only','exclude', 'nested',
                                             'show_as', 'show_as_r', 'transforms', 'assignments',
-                                            'star', 'flats'])
+                                            'star', 'flats', 'envelope'])
 
         nested_keys = list(nested.keys())
 
@@ -213,6 +213,9 @@ class slovar(dict):
 
         if defaults:
             _d = _d.flat().merge_with(slovar(defaults).flat())
+
+        if envelop:
+            _d = slovar({envelop:_d})
 
         return _d.unflat()
 

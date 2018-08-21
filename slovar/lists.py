@@ -30,7 +30,7 @@ def process_fields(fields, parse=True):
     transforms = {}
     assignments = {}
     flats = []
-
+    envelope = None
     star = False
 
     if isinstance(fields, str):
@@ -65,10 +65,15 @@ def process_fields(fields, parse=True):
 
         if parse and '__as__' in field:
             root,_,val = field.partition('__as__')
-            show_as[root] = val or root.split('.')[-1]
-            show_as_r[val or root.split('.')[-1]]=root
+            if not root and val:
+                envelope = val
+                star = True
+                continue
+            else:
+                show_as[root] = val or root.split('.')[-1]
+                show_as_r[val or root.split('.')[-1]]=root
 
-            field = root
+                field = root
 
         if trans:
             if field in show_as:
@@ -95,4 +100,5 @@ def process_fields(fields, parse=True):
              'transforms': transforms,
              'assignments': assignments,
              'star': star,
-             'flats': flats})
+             'flats': flats,
+             'envelope': envelope})
