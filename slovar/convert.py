@@ -7,7 +7,7 @@ from slovar import exceptions as exc
 
 def parametrize(func):
 
-    def wrapper(dset, name, default=None, raise_on_empty=False, pop=False,
+    def wrapper(dset, name, default=None, raise_on_values=None, pop=False,
                             allow_missing=False, set_as=None, pop_empty=False,
                             _raise=True, **kw):
 
@@ -29,8 +29,8 @@ def parametrize(func):
             dset.pop(name, None)
             return
 
-        if raise_on_empty and not value:
-            raise exc.SlovarValueError("'%s' can not be empty" % name)
+        if raise_on_values and value in raise_on_values:
+            raise exc.SlovarValueError("'%s' can not be any of %s" % name, raise_on_values)
 
         try:
             result = func(dset, value, **kw)

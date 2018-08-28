@@ -1,8 +1,6 @@
 import logging
-from itertools import groupby
 import collections
 import logging
-from itertools import groupby
 
 from slovar.convert import *
 from slovar.dictionaries import *
@@ -412,6 +410,9 @@ class slovar(dict):
         if name not in self.flat():
             self.merge(cls.from_dotted(name, val))
         return val
+
+    def with_defaults(self, **defaults):
+        return self.update_with(defaults, overwrite=False)
 
     def fget(self, key, *arg, **kw):
         return self.flat().get(key, *arg, **kw)
