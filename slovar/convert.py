@@ -175,8 +175,8 @@ def asdt(dset, value):
 
 
 def qs2dict(qs):
-    from slovar.dictset import dictset
-    return dictset(parse_qsl(qs, keep_blank_values=True))
+    from slovar import slovar
+    return slovar(parse_qsl(qs, keep_blank_values=True))
 
 
 @parametrize

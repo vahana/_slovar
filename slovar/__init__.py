@@ -94,15 +94,14 @@ class slovar(dict):
         return self.extract(fields)
 
     def to_slovar(self):
-        cls = self.__class__
         for key, val in list(self.items()):
             if isinstance(val, dict):
-                self[key] = cls(val)
+                self[key] = slovar(val)
             if isinstance(val, list):
                 new_list = []
                 for each in val:
                     if isinstance(each, dict):
-                        new_list.append(cls(each))
+                        new_list.append(slovar(each))
                     else:
                         new_list.append(each)
                 self[key] = new_list
