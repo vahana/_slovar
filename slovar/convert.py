@@ -2,7 +2,6 @@ import six
 from urllib.parse import parse_qsl
 
 from slovar.strings import split_strip, str2dt, str2rdt
-from slovar import exceptions as exc
 
 
 def parametrize(func):
@@ -19,7 +18,7 @@ def parametrize(func):
                 value = dset[name]
             except KeyError:
                 if not allow_missing:
-                    raise exc.SlovarKeyError("Missing '%s'" % name)
+                    raise KeyError("Missing '%s'" % name)
                 else:
                     return
         else:
@@ -30,14 +29,14 @@ def parametrize(func):
             return
 
         if raise_on_values and value in raise_on_values:
-            raise exc.SlovarValueError("'%s' can not be any of %s" % name, raise_on_values)
+            raise ValueError("'%s' can not be any of %s" % (name, raise_on_values))
 
         try:
             result = func(dset, value, **kw)
         except Exception:
             if _raise:
                 import sys
-                raise exc.SlovarValueError(sys.exc_info()[1])
+                raise ValueError(sys.exc_info()[1])
             else:
                 return
 
@@ -70,7 +69,7 @@ def asbool(dset, value):
     elif lvalue in falsey:
         return False
     else:
-        raise exc.SlovarValueError(
+        raise ValueError(
                 'Dont know how to convert `%s` to bool' % value)
 
 
@@ -123,7 +122,7 @@ def asrange(dset, value, typecast=str, sep='-'):
     elif isinstance(value, str):
         rng = split_strip(value, sep)
         if len(rng) != 2:
-            raise exc.SlovarValueError('bad range')
+            raise ValueError('bad range')
         list_ = list(range(int(rng[0]), int(rng[1])+1))
 
     else:
@@ -141,7 +140,7 @@ def asdict(dset, name, _type=None, _set=False, pop=False):
     try:
         value = dset[name]
     except KeyError:
-        raise exc.SlovarKeyError("Missing '%s'" % name)
+        raise KeyError("Missing '%s'" % name)
 
     if _type is None:
         _type = lambda t: t
@@ -182,3 +181,8 @@ def qs2dict(qs):
 @parametrize
 def asqs(dset, value):
     return qs2dict(value)
+
+from bson import ObjectId
+@parametrize
+def asdtob(dset, value):
+    return str(ObjectId.from_datetime(str2dt(value)))

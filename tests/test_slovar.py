@@ -152,29 +152,14 @@ class TestSlovar():
         assert expand_list([1,2,'3,4']) == [1,2,'3','4']
 
     def test_set_default(self):
-        class Slovarik(slovar):
-            pass
-
-        d1 = Slovarik(a=1)
+        d1 = slovar(a=1)
         d1.set_default('b.c', 1)
-        assert type(d1) == Slovarik
-        assert type(d1.b) == Slovarik
+        assert type(d1) == slovar
+        assert type(d1.b) == slovar
 
-    def test_raise_getattr(self):
-        class Slovarik(slovar):
-            def raise_getattr_exc(self, error):
-                raise NotImplementedError(error)
+    def test_nested_attrib(self):
+        d = slovar(a=slovar(b=1))
+        d.a.b
 
-        d = Slovarik(a=1)
-        with pytest.raises(NotImplementedError):
-            d.b
-
-    def test_value_exc(self):
-        class Slovarik(slovar):
-            def raise_value_exc(self, error):
-                raise NotImplementedError(error)
-
-        d = Slovarik(a=1)
-        with pytest.raises(NotImplementedError):
-            d.has('a', None)
-            d.subset('-a,b')
+        dd = d.to_dict()
+        assert dd.a.b == 1

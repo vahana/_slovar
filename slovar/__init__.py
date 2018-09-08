@@ -1,8 +1,9 @@
 import logging
 import collections
 import logging
+from bson import ObjectId
 
-from slovar.convert import *
+from slovar import convert
 from slovar.dictionaries import *
 from slovar.json import json_dumps
 from slovar.lists import *
@@ -12,7 +13,6 @@ TCAST_NONE = True
 log = logging.getLogger(__name__)
 
 class slovar(dict):
-
     """Named dict, with some set functionalities
 
         dset = slovar(a=1,b={'c':1})
@@ -52,21 +52,24 @@ class slovar(dict):
         super(slovar, self).__init__(*arg, **kw)
         self.to_slovar()
 
+    def bad_value_error_klass(self, e):
+        return ValueError(e)
+
+    def missing_key_error_klass(self, e):
+        return AttributeError(e)
+
     def __getattr__(self, key):
-        if key.startswith('__'): # dont touch the special attributes
+        if key.startswith('__'):
             raise AttributeError('Attribute error %s' % key)
         try:
             return self[key]
         except KeyError as e:
-            self.raise_getattr_exc(e.args)
-
-    def raise_getattr_exc(self, error):
-        raise AttributeError(error)
-
-    def raise_value_exc(self, error):
-        raise ValueError(error)
+            raise self.missing_key_error_klass(e.args)
 
     def __setattr__(self, key, val):
+        if key.startswith('__'):
+            return super().__setattr__(key,val)
+
         #this makes a.b.c access work for nested slovars
         if isinstance(val, dict) and not isinstance(val, self.__class__):
             val = self.__class__(val)
@@ -92,6 +95,9 @@ class slovar(dict):
 
     def to_dict(self, fields=None):
         return self.extract(fields)
+
+    def to_dict_type(self):
+        return super(slovar, self).copy()
 
     def to_slovar(self):
         for key, val in list(self.items()):
@@ -177,15 +183,18 @@ class slovar(dict):
             elif tr == 'dt':
                 if val:
                     val = str2dt(val)
+            elif tr == 'dtob':
+                if val:
+                    val = ObjectId(val).generation_time
             else:
                 _type = type(val)
                 try:
                     method = getattr(_type, tr)
                     if not isinstance(method, collections.Callable):
-                        self.raise_value_exc('`%s` is not a callable for type `%s`' % (tr, _type))
+                        raise self.bad_value_error_klass('`%s` is not a callable for type `%s`' % (tr, _type))
                     val = method(val)
                 except AttributeError as e:
-                    self.raise_value_exc('type `%s` does not have a method `%s`' % (_type, tr))
+                    raise self.bad_value_error_klass('type `%s` does not have a method `%s`' % (_type, tr))
 
             return val
 
@@ -257,7 +266,7 @@ class slovar(dict):
         _d = self.__class__()
 
         if only and exclude:
-            self.raise_value_exc(
+            raise self.bad_value_error_klass(
                 'Can only supply either positive or negative keys,'
                 ' but not both'
             )
@@ -371,7 +380,7 @@ class slovar(dict):
                     error_msg('Missing key: `%s`' % key)
 
         if (errors and _all) or (not _all and len(errors) >= len(keys)):
-            self.raise_value_exc('.'.join(errors))
+            raise self.bad_value_error_klass('.'.join(errors))
 
         return True
 
@@ -444,7 +453,7 @@ class slovar(dict):
                 else:
                     _lst.append(new_val)
             else:
-                self.raise_value_exc('`%s` is not a list' % key)
+                raise self.bad_value_error_klass('`%s` is not a list' % key)
 
             return _lst
 
@@ -504,7 +513,7 @@ class slovar(dict):
                 try:
                     new_lst = list(set(new_lst))
                 except TypeError as e:
-                    self.raise_value_exc('items in `%s` list not hashable. missed the set_key ?'\
+                    raise self.bad_value_error_klass('items in `%s` list not hashable. missed the set_key ?'\
                                      % (key))
 
             return new_lst
@@ -550,35 +559,47 @@ class slovar(dict):
             return False
         return all(name in self for name in keys)
 
+    def call_converter(self, name, arg, kw):
+        try:
+            return getattr(convert, name)(self, *arg, **kw)
+        except KeyError as e:
+            raise self.missing_key_error_klass(e)
+        except ValueError as e:
+            raise self.bad_value_error_klass(e)
+
     def asbool(self, *arg, **kw):
-        return asbool(self, *arg, **kw)
+        return self.call_converter('asbool', arg, kw)
 
     def aslist(self, *arg, **kw):
-        return aslist(self, *arg, **kw)
+        return self.call_converter('aslist', arg, kw)
 
     def asset(self, *arg, **kw):
-        return asset(self, *arg, **kw)
+        return self.call_converter('asset', arg, kw)
 
     def asint(self, *arg, **kw):
-        return asint(self, *arg, **kw)
+        return self.call_converter('asint', arg, kw)
 
     def asfloat(self, *arg, **kw):
-        return asfloat(self, *arg, **kw)
+        return self.call_converter('asfloat', arg, kw)
 
     def asdict(self, *arg, **kw):
-        return asdict(self, *arg, **kw)
+        return self.call_converter('asdict', arg, kw)
 
     def asdt(self, *arg, **kw):
-        return asdt(self, *arg, **kw)
+        return self.call_converter('asdt', arg, kw)
 
     def asstr(self, *arg, **kw):
+        return self.call_converter('asstr', arg, kw)
         return asstr(self, *arg, **kw)
 
     def asrange(self, *arg, **kw):
-        return asrange(self, *arg, **kw)
+        return self.call_converter('asrange', arg, kw)
 
     def asqs(self, *arg, **kw):
-        return asqs(self, *arg, **kw)
+        return self.call_converter('asqs', arg, kw)
+
+    def asdtob(self, *arg, **kw):
+        return self.call_converter('asdtob', arg, kw)
 
     def json(self):
         return json_dumps(self)
