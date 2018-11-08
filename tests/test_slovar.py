@@ -3,6 +3,7 @@ import pytest
 
 from slovar import slovar
 from slovar.dictionaries import merge
+from slovar.strings import snake2camel
 from slovar.lists import expand_list
 
 class TestSlovar():
@@ -23,6 +24,10 @@ class TestSlovar():
 
         del dset.b
         assert 'b' not in dset
+
+    def test_snake2camel(self):
+        assert snake2camel('a_b') == 'AB'
+        assert snake2camel('aa_bb') == 'AaBb'
 
     def test_subset(self):
         dset = slovar(a=1, b=2, c=3)
@@ -163,3 +168,42 @@ class TestSlovar():
 
         dd = d.to_dict()
         assert dd.a.b == 1
+
+    def test_diff(self):
+        dd = slovar(a=1)
+        ddd = slovar(b=1,c=2).diff(dd)
+        assert ddd.a == 1
+        assert 'c' not in ddd
+
+        ddd = slovar(a=1).diff(dd)
+        assert not ddd
+
+        ddd = slovar(a=2).diff(dd)
+        assert ddd.a == 1
+
+        dd = slovar(a=slovar(b=1))
+        ddd = slovar(c=slovar(b=1)).diff(dd)
+        assert ddd.a.b == 1
+
+        dd = slovar(a=slovar(b=1))
+        ddd = slovar(a=slovar(b=1)).diff(dd)
+        assert not ddd
+
+        dd = slovar(a=slovar(b=1))
+        ddd = slovar(a=slovar(b=2)).diff(dd)
+        assert ddd.a.b == 1
+
+        dd = slovar(c=[1,2,3])
+        ddd = slovar(a=slovar(b=2), c=[1,2,3]).diff(dd)
+        assert not ddd
+
+        dd = slovar(a=slovar(b=1), c=[1,2,3])
+        ddd = slovar(a=slovar(b=2), c=[1,2]).diff(dd)
+        assert ddd.a.b == 1
+        assert ddd.c == [1,2,3]
+
+        dd = slovar(c=[0,1,2])
+        ddd = slovar(c=[1,2]).diff(dd)
+        assert ddd.c == [0,1,2]
+
+

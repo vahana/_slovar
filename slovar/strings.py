@@ -56,3 +56,15 @@ def str2dt(strdt, _raise=False):
             raise ValueError(msg)
         else:
             log.error(msg)
+
+
+def snake2camel(text):
+    '''turn the snake case to camel case: snake_camel -> SnakeCamel'''
+    return ''.join([a.title() for a in text.split('_')])
+
+
+def camel2snake(name):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+

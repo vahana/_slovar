@@ -1,3 +1,4 @@
+import re
 import logging
 import collections
 import logging
@@ -8,6 +9,14 @@ from slovar.dictionaries import *
 from slovar.json import json_dumps
 from slovar.lists import *
 from slovar.strings import *
+
+def parse_func_params(s):
+    pattern = r'(\w[\w\d_]*)\((.*)\)$'
+    match = re.match(pattern, s)
+    if match:
+        return list(match.groups())
+    else:
+        return []
 
 TCAST_NONE = True
 log = logging.getLogger(__name__)
@@ -163,59 +172,89 @@ class slovar(dict):
         for _k in list(show_as_r.values()):
             _d.pop(_k, None)
 
-        def tcast(_dict, key, tr):
-            val = _dict[key]
+        def tcast(_dict, key, trs, default_value=None):
+            val = _dict.get(key, default_value)
 
             if val is None and not TCAST_NONE:
                 log.debug('extracted key %r is None' % key)
                 return val
-            if tr == 'safe':
+
+            safe = False
+
+            if isinstance(val, list):
+                for tr in trs:
+                    parsed_trs = parse_func_params(tr)
+                    op = parsed_trs[0]
+                    args = parsed_trs[1:]
+                    arg = None
+
+                    if args:
+                        arg = args[0]
+
+                    if op == 'sort':
+                        sort_func = None
+                        reverse = False
+
+                        if arg:
+                            if arg[0] in ['-', '+']:
+                                sort_direction = arg[0]
+                                arg = arg[1:]
+
+                            sort_func = lambda x: x[arg]
+
+                        val = sorted(val, key=sort_func, reverse=sort_direction=='-')
+
+                    elif op == 'size' and arg:
+                        val = val[:int(arg)]
+
                 return val
 
-            if tr in ('str', 'unicode'):
-                val = str(val)
-            elif tr == 'int':
-                val = int(val) if val else val
-            elif tr == 'float':
-                val = float(val) if val else val
-            elif tr == 'flat' and isinstance(val, slovar):
-                val = val.flat()
-            elif tr == 'dt':
-                if val:
-                    val = str2dt(val)
-            elif tr == 'dtob':
-                if val:
-                    val = ObjectId(val).generation_time
-            else:
-                _type = type(val)
+            for tr in trs:
                 try:
-                    method = getattr(_type, tr)
-                    if not isinstance(method, collections.Callable):
-                        raise self.bad_value_error_klass('`%s` is not a callable for type `%s`' % (tr, _type))
-                    val = method(val)
-                except AttributeError as e:
-                    raise self.bad_value_error_klass('type `%s` does not have a method `%s`' % (_type, tr))
+                    if 'safe' in tr:
+                        safe = True
+                    elif tr in ('str', 'unicode'):
+                        val = str(val)
+                    elif tr == 'int':
+                        val = int(val) if val else val
+                    elif tr == 'float':
+                        val = float(val) if val else val
+                    elif tr == 'flat' and isinstance(val, slovar):
+                        val = val.flat()
+                    elif tr == 'dt':
+                        if val:
+                            val = str2dt(val)
+                    elif tr == 'dtob':
+                        if val:
+                            val = ObjectId(val).generation_time
+                    else:
+                        _type = type(val)
+                        try:
+                            method = getattr(_type, tr)
+                            if not isinstance(method, collections.Callable):
+                                raise self.bad_value_error_klass('`%s` is not a callable for type `%s`' % (tr, _type))
+                            val = method(val)
+                        except AttributeError as e:
+                            raise self.bad_value_error_klass('type `%s` does not have a method `%s`' % (_type, tr))
 
-            return val
-
-        processed_trs = []
-        for key, trs in list(trans.items()):
-            if key in _d:
-                try:
-                    for tr in trs:
-                        _d[key] = tcast(_d, key, tr)
-                        processed_trs.append(tr)
                 except:
                     import sys
                     log.error('typecast failed for key=`%s`, value=`%s`: %s' %
                                                 (key, _d[key], sys.exc_info()[1]))
 
-                    if 'safe' not in processed_trs:
+                    if not safe:
                         raise
+
+            return val
+
+        for key, trs in list(trans.items()):
+            if key in _d:
+                _d[key] = tcast(_d, key, trs)
 
         for kk, vv in assignments.items():
             val, _, tr = vv.partition(':')
-            _d[kk] = tcast(val, tr) if tr else val
+            trs = split_strip(tr, '|')
+            _d[kk] = tcast(_d, kk, trs, val) if trs else val
 
         if defaults:
             _d = _d.flat().merge_with(slovar(defaults).flat())
@@ -559,7 +598,18 @@ class slovar(dict):
             return False
         return all(name in self for name in keys)
 
-    def call_converter(self, name, arg, kw):
+    def diff(self, _d):
+        #add missing by keys
+        _diff = slovar({ k : _d[k] for k in set(_d) - set(self) })
+
+        #add different values for same keys
+        for kk, vv in self.items():
+            if kk in _d and _d[kk] != vv:
+                _diff[kk] = _d[kk]
+
+        return _diff
+
+    def call_converter(self, name, *arg, **kw):
         try:
             return getattr(convert, name)(self, *arg, **kw)
         except KeyError as e:
@@ -568,38 +618,38 @@ class slovar(dict):
             raise self.bad_value_error_klass(e)
 
     def asbool(self, *arg, **kw):
-        return self.call_converter('asbool', arg, kw)
+        return self.call_converter('asbool', *arg, **kw)
 
     def aslist(self, *arg, **kw):
-        return self.call_converter('aslist', arg, kw)
+        return self.call_converter('aslist', *arg, **kw)
 
     def asset(self, *arg, **kw):
-        return self.call_converter('asset', arg, kw)
+        return self.call_converter('asset', *arg, **kw)
 
     def asint(self, *arg, **kw):
-        return self.call_converter('asint', arg, kw)
+        return self.call_converter('asint', *arg, **kw)
 
     def asfloat(self, *arg, **kw):
-        return self.call_converter('asfloat', arg, kw)
+        return self.call_converter('asfloat', *arg, **kw)
 
     def asdict(self, *arg, **kw):
-        return self.call_converter('asdict', arg, kw)
+        return self.call_converter('asdict', *arg, **kw)
 
     def asdt(self, *arg, **kw):
-        return self.call_converter('asdt', arg, kw)
+        return self.call_converter('asdt', *arg, **kw)
 
     def asstr(self, *arg, **kw):
-        return self.call_converter('asstr', arg, kw)
+        return self.call_converter('asstr', *arg, **kw)
         return asstr(self, *arg, **kw)
 
     def asrange(self, *arg, **kw):
-        return self.call_converter('asrange', arg, kw)
+        return self.call_converter('asrange', *arg, **kw)
 
     def asqs(self, *arg, **kw):
-        return self.call_converter('asqs', arg, kw)
+        return self.call_converter('asqs', *arg, **kw)
 
     def asdtob(self, *arg, **kw):
-        return self.call_converter('asdtob', arg, kw)
+        return self.call_converter('asdtob', *arg, **kw)
 
     def json(self):
         return json_dumps(self)

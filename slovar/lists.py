@@ -72,7 +72,6 @@ def process_fields(fields, parse=True):
             else:
                 show_as[root] = val or root.split('.')[-1]
                 show_as_r[val or root.split('.')[-1]]=root
-
                 field = root
 
         if trans:
@@ -90,6 +89,10 @@ def process_fields(fields, parse=True):
             fields_exclude.append(field)
         else:
             fields_only.append(field)
+
+    if star:
+        fields_only = []
+        fields_exclude =[]
 
     return slovar({
              'only': fields_only,
