@@ -95,6 +95,7 @@ def process_fields(fields, parse=True):
         fields_exclude =[]
 
     return slovar({
+             'fields': fields,
              'only': fields_only,
              'exclude':fields_exclude,
              'nested': nested,

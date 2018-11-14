@@ -21,6 +21,7 @@ def parse_func_params(s):
 TCAST_NONE = True
 log = logging.getLogger(__name__)
 
+
 class slovar(dict):
     """Named dict, with some set functionalities
 
@@ -130,8 +131,8 @@ class slovar(dict):
         if not fields:
             return self
 
-        only, exclude, nested, show_as, show_as_r, trans, assignments, star, flats, envelop =\
-                process_fields(fields).mget(['only','exclude', 'nested',
+        fields, only, exclude, nested, show_as, show_as_r, trans, assignments, star, flats, envelope =\
+                process_fields(fields).mget(['fields','only','exclude', 'nested',
                                             'show_as', 'show_as_r', 'transforms', 'assignments',
                                             'star', 'flats', 'envelope'])
 
@@ -168,9 +169,11 @@ class slovar(dict):
                 #reverse merge to keep all show_as values and merge the rest
                 _d = self.__class__({new_key:_d.get(key)}).merge(_d)
 
-        #remove old keys
-        for _k in list(show_as_r.values()):
-            _d.pop(_k, None)
+        if not star: # if no star then dont keep the "original" keys
+            #remove original keys
+            for _k in list(show_as_r.values()):
+                if _k not in fields: # if key in the original fields, dont pop it. e.g. `a__as__x.a,a`
+                    _d.pop(_k, None)
 
         def tcast(_dict, key, trs, default_value=None):
             val = _dict.get(key, default_value)
@@ -259,8 +262,8 @@ class slovar(dict):
         if defaults:
             _d = _d.flat().merge_with(slovar(defaults).flat())
 
-        if envelop:
-            _d = slovar({envelop:_d})
+        if envelope:
+            _d = slovar({envelope:_d})
 
         return _d.unflat()
 
