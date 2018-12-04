@@ -570,8 +570,13 @@ class slovar(dict):
                 self_dict[key] = _append_to(self_dict, key, val)
             elif key in append_to_set:
                 self_dict[key] = _append_to_set(self_dict, key, val)
-            elif overwrite or key not in self_dict:
+            elif key not in self_dict:
                 self_dict[key] = val
+            elif overwrite:
+                if (isinstance(overwrite, bool) and overwrite is True) or \
+                                    (isinstance(overwrite, list) and key in overwrite):
+                    self_dict[key] = val
+
 
         if flatten:
             self_dict = self_dict.unflat()
