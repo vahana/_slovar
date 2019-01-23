@@ -32,13 +32,13 @@ def process_fields(fields, parse=True):
     flats = []
     envelope = None
     star = False
+    negative = False
 
     if isinstance(fields, str):
         fields = split_strip(fields)
 
     for field in expand_list(fields):
         field = field.strip()
-        negative = False
 
         if not field:
             continue

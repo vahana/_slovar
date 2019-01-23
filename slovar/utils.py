@@ -85,4 +85,3 @@ def fuzzy_sort(n1, nn, cuttoff=0.8):
     if matches:
         return sorted(matches, key=_key_func, reverse=True)
 
-

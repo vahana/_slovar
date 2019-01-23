@@ -184,33 +184,43 @@ class slovar(dict):
 
             safe = False
 
-            if isinstance(val, list):
-                for tr in trs:
-                    parsed_trs = parse_func_params(tr)
-                    op = parsed_trs[0]
-                    args = parsed_trs[1:]
-                    arg = None
+            # if isinstance(val, list):
+            #     for tr in trs:
+            #         parsed_trs = parse_func_params(tr)
+            #         op = parsed_trs[0]
+            #         args = parsed_trs[1:]
+            #         arg = None
 
-                    if args:
-                        arg = args[0]
+            #         if args:
+            #             arg = args[0]
 
-                    if op == 'sort':
-                        sort_func = None
-                        reverse = False
+            #         if op == 'sort':
+            #             sort_func = None
+            #             reverse = False
 
-                        if arg:
-                            if arg[0] in ['-', '+']:
-                                sort_direction = arg[0]
-                                arg = arg[1:]
+            #             if arg:
+            #                 if arg[0] in ['-', '+']:
+            #                     sort_direction = arg[0]
+            #                     arg = arg[1:]
 
-                            sort_func = lambda x: x[arg]
+            #                 sort_func = lambda x: x[arg]
 
-                        val = sorted(val, key=sort_func, reverse=sort_direction=='-')
+            #             val = sorted(val, key=sort_func, reverse=sort_direction=='-')
 
-                    elif op == 'size' and arg:
-                        val = val[:int(arg)]
+            #         elif op == 'size' and arg:
+            #             val = val[:int(arg)]
 
-                return val
+            #         elif op == 'concat':
+            #             sep = arg or ','
+            #             val = sep.join(val)
+
+            #     return val
+
+            def concat(val):
+                if isinstance(val, list):
+                    return ''.join(val)
+                else:
+                    return str(val)
 
             for tr in trs:
                 try:
@@ -230,6 +240,8 @@ class slovar(dict):
                     elif tr == 'dtob':
                         if val:
                             val = ObjectId(val).generation_time
+                    elif tr == 'concat':
+                        val = concat(val)
                     else:
                         _type = type(val)
                         try:
@@ -606,16 +618,35 @@ class slovar(dict):
             return False
         return all(name in self for name in keys)
 
-    def diff(self, _d):
-        #add missing by keys
-        _diff = slovar({ k : _d[k] for k in set(_d) - set(self) })
+    def diff(self, sl2, diff_fields=[], flat_keys=[]):
 
-        #add different values for same keys
-        for kk, vv in self.items():
-            if kk in _d and _d[kk] != vv:
-                _diff[kk] = _d[kk]
+        _self = self
 
-        return _diff
+        if flat_keys:
+            _self = _self.flat(keys=flat_keys)
+            sl2 = sl2.flat(keys=flat_keys)
+
+        self_diff = slovar()
+        sl2_diff = slovar()
+        _diff = slovar()
+
+        for kk in (diff_fields or list(_self.keys())):
+            selfv = _self.get(kk, None)
+            sl2v = sl2.get(kk, None)
+
+            if selfv != sl2v:
+                _diff[kk] = {'from': selfv, 'to': sl2v}
+                self_diff[kk] = selfv
+                sl2_diff[kk] = sl2v
+
+        if not diff_fields:
+            #iterate through missing keys in _self
+            for kk in set(sl2.keys())-set(_self.keys()):
+                _diff[kk] = {'from': None, 'to': sl2[kk]}
+                self_diff[kk] = None
+                sl2_diff[kk] = sl2[kk]
+
+        return self_diff, sl2_diff
 
     def call_converter(self, name, *arg, **kw):
         try:
