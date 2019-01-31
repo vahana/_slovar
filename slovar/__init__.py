@@ -3,6 +3,7 @@ import logging
 import collections
 import logging
 from bson import ObjectId
+from datetime import datetime
 
 from slovar import convert
 from slovar.dictionaries import *
@@ -268,6 +269,12 @@ class slovar(dict):
 
         for kk, vv in assignments.items():
             val, _, tr = vv.partition(':')
+
+            if val == '__NOW__':
+                val = datetime.utcnow()
+            elif val == '__OID__':
+                val = ObjectId()
+
             trs = split_strip(tr, '|')
             _d[kk] = tcast(_d, kk, trs, val) if trs else val
 
@@ -480,7 +487,7 @@ class slovar(dict):
         return self.flat().get(key, *arg, **kw)
 
     def update_with(self, _dict, overwrite=True, append_to=None,
-                    append_to_set=None, flatten=None):
+                                append_to_set=None, flatten=None):
 
         def process_append_to_param(_lst):
             if isinstance(_lst, str):
@@ -493,6 +500,12 @@ class slovar(dict):
             for each in (_lst or []):
                 k,_,sk = each.partition(':')
                 _d[k]=sk
+
+                #reference to nested field?
+                if '.' in k and k.split('.')[0] not in flatten:
+                    raise ValueError(
+                        '`append_to_` referrers to nested field `%s` without flattening.'
+                        ' forgot to pass `flatten=%s`?' % (k, k.split('.')[0]))
 
             return _d
 
@@ -647,6 +660,20 @@ class slovar(dict):
                 sl2_diff[kk] = sl2[kk]
 
         return self_diff, sl2_diff
+
+    def add_to_list(self, list_name, items, unique=False):
+        if list_name not in self:
+            self[list_name] = []
+
+        if isinstance(items, list):
+            self[list_name].extend(items)
+        else:
+            self[list_name].append(items)
+
+        if unique:
+            self[list_name] = list(set(self[list_name]))
+
+        return self[list_name]
 
     def call_converter(self, name, *arg, **kw):
         try:
