@@ -106,3 +106,44 @@ def process_fields(fields, parse=True):
              'star': star,
              'flats': flats,
              'envelope': envelope})
+
+
+def union_fields(f1, f2):
+    f1 = process_fields(f1)
+    f2 = process_fields(f2)
+
+    'a,b__as__bb,c.d,e.f__as__g,*'
+    'a,x,c'
+
+
+def sort_list(items, by='', reverse=False):
+    'sort generic list of basic type or nested dicts'
+
+    _items = []
+    none_items = []
+
+    if not by:
+        return sorted(items, reverse=reverse)
+
+    for each in items:
+        if isinstance(each, dict):
+            val = each.get(by)
+
+            if val is None:
+                none_items.append(each)
+                continue
+
+            _items.append(each)
+
+    sorted_list = sorted(_items, key=lambda x: x.get(by), reverse=reverse)
+
+    if reverse:
+        return sorted_list + none_items
+    else:
+        return none_items + sorted_list
+
+
+
+
+
+

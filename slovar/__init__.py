@@ -21,6 +21,7 @@ def parse_func_params(s):
 
 TCAST_NONE = True
 log = logging.getLogger(__name__)
+FUNCS = ['sort', 'index']
 
 
 class slovar(dict):
@@ -184,38 +185,7 @@ class slovar(dict):
                 return val
 
             safe = False
-
-            # if isinstance(val, list):
-            #     for tr in trs:
-            #         parsed_trs = parse_func_params(tr)
-            #         op = parsed_trs[0]
-            #         args = parsed_trs[1:]
-            #         arg = None
-
-            #         if args:
-            #             arg = args[0]
-
-            #         if op == 'sort':
-            #             sort_func = None
-            #             reverse = False
-
-            #             if arg:
-            #                 if arg[0] in ['-', '+']:
-            #                     sort_direction = arg[0]
-            #                     arg = arg[1:]
-
-            #                 sort_func = lambda x: x[arg]
-
-            #             val = sorted(val, key=sort_func, reverse=sort_direction=='-')
-
-            #         elif op == 'size' and arg:
-            #             val = val[:int(arg)]
-
-            #         elif op == 'concat':
-            #             sep = arg or ','
-            #             val = sep.join(val)
-
-            #     return val
+            prev_tr = None
 
             def concat(val):
                 if isinstance(val, list):
@@ -227,22 +197,46 @@ class slovar(dict):
                 try:
                     if 'safe' in tr:
                         safe = True
+
                     elif tr in ('str', 'unicode'):
                         val = str(val)
+
                     elif tr == 'int':
                         val = int(val) if val else val
+
                     elif tr == 'float':
                         val = float(val) if val else val
+
                     elif tr == 'flat' and isinstance(val, slovar):
                         val = val.flat()
+
                     elif tr == 'dt':
                         if val:
                             val = str2dt(val)
+
                     elif tr == 'dtob':
                         if val:
                             val = ObjectId(val).generation_time
+
                     elif tr == 'concat':
                         val = concat(val)
+
+                    elif tr in FUNCS:
+                        prev_tr = tr
+
+                    elif prev_tr:
+                        if prev_tr == 'sort':
+                            reverse = False
+                            if tr[0] in ['-', '+']:
+                                reverse = tr[0] == '-'
+                                tr = tr[1:]
+                            val = sort_list(val, tr, reverse = reverse)
+
+                        elif prev_tr == 'index':
+                            val = val[int(tr)]
+
+                        prev_tr = None
+
                     else:
                         _type = type(val)
                         try:
@@ -259,7 +253,7 @@ class slovar(dict):
                                                 (key, _d[key], sys.exc_info()[1]))
 
                     if not safe:
-                        raise
+                        raise self.bad_value_error_klass(sys.exc_info()[1])
 
             return val
 
@@ -502,8 +496,8 @@ class slovar(dict):
                 _d[k]=sk
 
                 #reference to nested field?
-                if '.' in k and k.split('.')[0] not in flatten:
-                    raise ValueError(
+                if '.' in k and (not flatten or (isinstance(flatten, list) and k.split('.')[0] not in flatten)):
+                    raise self.bad_value_error_klass(
                         '`append_to_` referrers to nested field `%s` without flattening.'
                         ' forgot to pass `flatten=%s`?' % (k, k.split('.')[0]))
 
@@ -674,6 +668,14 @@ class slovar(dict):
             self[list_name] = list(set(self[list_name]))
 
         return self[list_name]
+
+    def concat_values(self, sep=':'):
+        concat = []
+
+        for kk in sorted(self.keys()):
+            concat.append(str(self[kk]))
+
+        return sep.join(concat)
 
     def call_converter(self, name, *arg, **kw):
         try:
