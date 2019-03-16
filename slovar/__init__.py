@@ -637,6 +637,9 @@ class slovar(dict):
         sl2_diff = slovar()
         _diff = slovar()
 
+        if diff_fields:
+            diff_fields = list(_self.extract(diff_fields).keys())
+
         for kk in (diff_fields or list(_self.keys())):
             selfv = _self.get(kk, None)
             sl2v = sl2.get(kk, None)
