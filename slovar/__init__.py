@@ -658,19 +658,31 @@ class slovar(dict):
 
         return self_diff, sl2_diff
 
-    def add_to_list(self, list_name, items, unique=False):
-        if list_name not in self:
-            self[list_name] = []
+    def add_to_list(self, list_name, items, unique=False, position=None, sort_key=None):
+        _self = self
 
-        if isinstance(items, list):
-            self[list_name].extend(items)
+        if list_name not in _self:
+            _self[list_name] = []
+
+        if not items:
+            return _self
+
+        if not isinstance(items, list):
+            items = [items]
+
+        if position is not None:
+            for ix in range(len(items)):
+                _self[list_name].insert(position+ix, items[ix])
         else:
-            self[list_name].append(items)
+            _self[list_name].extend(items)
 
         if unique:
-            self[list_name] = list(set(self[list_name]))
+            _self[list_name] = list(set(_self[list_name]))
 
-        return self[list_name]
+        if sort_key:
+            _self[list_name] = sorted(_self[list_name], key=sort_key)
+
+        return _self
 
     def concat_values(self, sep=':'):
         concat = []
