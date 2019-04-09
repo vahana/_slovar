@@ -625,6 +625,15 @@ class slovar(dict):
             return False
         return all(name in self for name in keys)
 
+    def key_diff(self, keys):
+        return list(set(self.keys()) - set(keys))
+
+    def key_union(self, keys):
+        return list(set(self.keys()) | set(keys))
+
+    def key_intersection(self, keys):
+        return list(set(self.keys()) & set(keys))
+
     def diff(self, sl2, diff_fields=[], flat_keys=[]):
 
         _self = self
