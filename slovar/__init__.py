@@ -20,8 +20,9 @@ def parse_func_params(s):
         return []
 
 TCAST_NONE = True
-log = logging.getLogger(__name__)
 FUNCS = ['sort', 'index']
+
+log = logging.getLogger(__name__)
 
 
 class slovar(dict):
@@ -129,6 +130,86 @@ class slovar(dict):
     def copy(self):
         return self.__class__(super(slovar, self).copy())
 
+    def tcast(self, key, val, trs, default_value=None):
+        val = val or default_value
+
+        if val is None and not TCAST_NONE:
+            log.debug('extracted key %r is None' % key)
+            return val
+
+        safe = False
+        prev_tr = None
+
+        def concat(val):
+            if isinstance(val, list):
+                return ''.join(val)
+            else:
+                return str(val)
+
+        for tr in trs:
+            try:
+                if 'safe' in tr:
+                    safe = True
+
+                elif tr in ('str', 'unicode'):
+                    val = str(val)
+
+                elif tr == 'int':
+                    val = int(val) if val else val
+
+                elif tr == 'float':
+                    val = float(val) if val else val
+
+                elif tr == 'flat' and isinstance(val, slovar):
+                    val = val.flat()
+
+                elif tr == 'dt':
+                    if val:
+                        val = str2dt(val)
+
+                elif tr == 'dtob':
+                    if val:
+                        val = ObjectId(val).generation_time
+
+                elif tr == 'concat':
+                    val = concat(val)
+
+                elif tr in FUNCS:
+                    prev_tr = tr
+
+                elif prev_tr:
+                    if prev_tr == 'sort':
+                        reverse = False
+                        if tr[0] in ['-', '+']:
+                            reverse = tr[0] == '-'
+                            tr = tr[1:]
+                        val = sort_list(val, tr, reverse = reverse)
+
+                    elif prev_tr == 'index':
+                        val = val[int(tr)]
+
+                    prev_tr = None
+
+                else:
+                    _type = type(val)
+                    try:
+                        method = getattr(_type, tr)
+                        if not isinstance(method, collections.Callable):
+                            raise self.bad_value_error_klass('`%s` is not a callable for type `%s`' % (tr, _type))
+                        val = method(val)
+                    except AttributeError as e:
+                        raise self.bad_value_error_klass('type `%s` does not have a method `%s`' % (_type, tr))
+
+            except:
+                import sys
+                log.error('typecast failed for key=`%s`, value=`%s`: %s' %
+                                            (key, val, sys.exc_info()[1]))
+
+                if not safe:
+                    raise self.bad_value_error_klass(sys.exc_info()[1])
+
+        return val
+
     def extract(self, fields, defaults=None):
         if not fields:
             return self
@@ -140,8 +221,10 @@ class slovar(dict):
 
         nested_keys = list(nested.keys())
 
-        def process_lists(flat_d):
+        def process_lists(flat_d, _d):
             for nkey, nval in list(nested.items()):
+                if nkey in assignments:
+                    continue
                 if '..' in nkey:
                     pref, suf = nkey.split('..', 1)
                     _lst = []
@@ -155,128 +238,82 @@ class slovar(dict):
                     nested_keys.append(new_key)
                     flat_d[new_key] = _lst
 
-        if star:
-            _d = self
-        else:
-            _d = self.subset(only + ['-'+e for e in exclude])
+        def process_assignments(_d):
+            for kk, vv in assignments.items():
+                trans.pop(kk, None)
+                nested.pop(kk, None)
 
-        if nested:
+                val, _, tr = vv.partition(':')
+
+                if val == '__NOW__':
+                    val = datetime.utcnow()
+                elif val == '__OID__':
+                    val = ObjectId()
+
+                if '..' in kk:
+                    list_key, new_key = kk.split('..')
+                    new_val = []
+
+                    for it in _d[list_key]:
+                        if tr:
+                            val = self.tcast(list_key, val, split_strip(tr, '|'))
+
+                        new_val.append(it.update({new_key:val}))
+
+                    if new_val:
+                        _d[list_key] = new_val
+
+                else:
+                    trs = split_strip(tr, '|')
+                    _d[kk] = tcast(_d, kk, trs, val) if trs else val
+
+        def process_nested(_d):
+            if not nested:
+                return
+
             flat_d = self.flat(keep_lists=0)
-            process_lists(flat_d)
+            process_lists(flat_d, _d)
             flat_d = flat_d.subset(nested_keys)
             _d = _d.remove(list(nested.values())).update(flat_d)
 
-        for new_key, key in list(show_as_r.items()):
-            if key in _d:
-                #reverse merge to keep all show_as values and merge the rest
-                _d = self.__class__({new_key:_d.get(key)}).merge(_d)
+        def process_show_as(_d):
+            for new_key, key in list(show_as_r.items()):
+                if key in _d:
+                    #reverse merge to keep all show_as values and merge the rest
+                    _d = self.__class__({new_key:_d.get(key)}).merge(_d)
 
-        if not star: # if no star then dont keep the "original" keys
-            #remove original keys
-            for _k in list(show_as_r.values()):
-                if _k not in fields: # if key in the original fields, dont pop it. e.g. `a__as__x.a,a`
-                    _d.pop(_k, None)
+            if not star: # if no star then dont keep the "original" keys
+                #remove original keys
+                for _k in list(show_as_r.values()):
+                    if _k not in fields: # if key in the original fields, dont pop it. e.g. `a__as__x.a,a`
+                        _d.pop(_k, None)
 
-        def tcast(_dict, key, trs, default_value=None):
-            val = _dict.get(key, default_value)
+        def process_trans(_d):
+            for key, trs in list(trans.items()):
+                if key in _d:
+                    _d[key] = self.tcast(key, _d.get(key), trs)
 
-            if val is None and not TCAST_NONE:
-                log.debug('extracted key %r is None' % key)
-                return val
+        def process_defaults(_d):
+            if defaults:
+                _d = _d.flat().merge_with(slovar(defaults).flat())
 
-            safe = False
-            prev_tr = None
+        def process_envelope(_d):
+            if envelope:
+                _d = slovar({envelope:_d})
 
-            def concat(val):
-                if isinstance(val, list):
-                    return ''.join(val)
-                else:
-                    return str(val)
+        def process_star():
+            if star:
+                return self
+            else:
+                return self.subset(only + ['-'+e for e in exclude])
 
-            for tr in trs:
-                try:
-                    if 'safe' in tr:
-                        safe = True
-
-                    elif tr in ('str', 'unicode'):
-                        val = str(val)
-
-                    elif tr == 'int':
-                        val = int(val) if val else val
-
-                    elif tr == 'float':
-                        val = float(val) if val else val
-
-                    elif tr == 'flat' and isinstance(val, slovar):
-                        val = val.flat()
-
-                    elif tr == 'dt':
-                        if val:
-                            val = str2dt(val)
-
-                    elif tr == 'dtob':
-                        if val:
-                            val = ObjectId(val).generation_time
-
-                    elif tr == 'concat':
-                        val = concat(val)
-
-                    elif tr in FUNCS:
-                        prev_tr = tr
-
-                    elif prev_tr:
-                        if prev_tr == 'sort':
-                            reverse = False
-                            if tr[0] in ['-', '+']:
-                                reverse = tr[0] == '-'
-                                tr = tr[1:]
-                            val = sort_list(val, tr, reverse = reverse)
-
-                        elif prev_tr == 'index':
-                            val = val[int(tr)]
-
-                        prev_tr = None
-
-                    else:
-                        _type = type(val)
-                        try:
-                            method = getattr(_type, tr)
-                            if not isinstance(method, collections.Callable):
-                                raise self.bad_value_error_klass('`%s` is not a callable for type `%s`' % (tr, _type))
-                            val = method(val)
-                        except AttributeError as e:
-                            raise self.bad_value_error_klass('type `%s` does not have a method `%s`' % (_type, tr))
-
-                except:
-                    import sys
-                    log.error('typecast failed for key=`%s`, value=`%s`: %s' %
-                                                (key, _d[key], sys.exc_info()[1]))
-
-                    if not safe:
-                        raise self.bad_value_error_klass(sys.exc_info()[1])
-
-            return val
-
-        for key, trs in list(trans.items()):
-            if key in _d:
-                _d[key] = tcast(_d, key, trs)
-
-        for kk, vv in assignments.items():
-            val, _, tr = vv.partition(':')
-
-            if val == '__NOW__':
-                val = datetime.utcnow()
-            elif val == '__OID__':
-                val = ObjectId()
-
-            trs = split_strip(tr, '|')
-            _d[kk] = tcast(_d, kk, trs, val) if trs else val
-
-        if defaults:
-            _d = _d.flat().merge_with(slovar(defaults).flat())
-
-        if envelope:
-            _d = slovar({envelope:_d})
+        _d = process_star()
+        process_assignments(_d)
+        process_nested(_d)
+        process_show_as(_d)
+        process_trans(_d)
+        process_defaults(_d)
+        process_envelope(_d)
 
         return _d.unflat()
 
@@ -611,7 +648,8 @@ class slovar(dict):
 
     def pop_many(self, keys):
         poped = self.__class__()
-        for key in keys:
+        pop_keys = self.extract(keys).keys()
+        for key in pop_keys:
             poped[key] = self.pop(key, None)
         return poped
 

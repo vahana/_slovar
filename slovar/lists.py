@@ -50,7 +50,7 @@ def process_fields(fields, parse=True):
         if ':=' in field:
             kk, _, val = field.partition(':=')
             assignments[kk] = val
-            continue
+            # continue
 
         field,_,trans = field.partition(':')
         trans = trans.split('|') if trans else []
