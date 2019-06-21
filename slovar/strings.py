@@ -34,6 +34,7 @@ def str2rdt(strdt):
         number = int(m.group(1))
         word = m.group(4)
         if word in matches:
+            log.debug('relative date detected: %s', {matches[word]:number})
             return dt_relativedelta.relativedelta(**{matches[word]:number})
 
 
@@ -47,7 +48,6 @@ def str2dt(strdt, _raise=False):
     dt = str2rdt(strdt)
     if dt:
         return datetime.utcnow()+dt
-
     try:
         return dt_parser.parse(strdt)
     except ValueError as e:

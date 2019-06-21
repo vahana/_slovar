@@ -2,6 +2,7 @@ import re
 import logging
 import collections
 import logging
+import builtins
 from bson import ObjectId
 from datetime import datetime
 
@@ -20,7 +21,7 @@ def parse_func_params(s):
         return []
 
 TCAST_NONE = True
-FUNCS = ['sort', 'index']
+FUNCS = ['sort', 'index', 'concat']
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +64,18 @@ class slovar(dict):
 
     def __init__(self, *arg, **kw):
         super(slovar, self).__init__(*arg, **kw)
-        self.to_slovar()
+
+        for key, val in list(self.items()):
+            if isinstance(val, dict):
+                self[key] = slovar(val)
+            if isinstance(val, list):
+                new_list = []
+                for each in val:
+                    if isinstance(each, dict):
+                        new_list.append(slovar(each))
+                    else:
+                        new_list.append(each)
+                self[key] = new_list
 
     def bad_value_error_klass(self, e):
         return ValueError(e)
@@ -112,26 +124,17 @@ class slovar(dict):
     def to_dict_type(self):
         return super(slovar, self).copy()
 
-    def to_slovar(self):
-        for key, val in list(self.items()):
-            if isinstance(val, dict):
-                self[key] = slovar(val)
-            if isinstance(val, list):
-                new_list = []
-                for each in val:
-                    if isinstance(each, dict):
-                        new_list.append(slovar(each))
-                    else:
-                        new_list.append(each)
-                self[key] = new_list
+    @classmethod
+    def to(cls, dct):
+        if isinstance(dct, slovar):
+            return dct.copy()
 
-        return self
+        return slovar(dct)
 
     def copy(self):
         return self.__class__(super(slovar, self).copy())
 
-    def tcast(self, key, val, trs, default_value=None):
-        val = val or default_value
+    def tcast(self, key, val, trs):
 
         if val is None and not TCAST_NONE:
             log.debug('extracted key %r is None' % key)
@@ -140,9 +143,9 @@ class slovar(dict):
         safe = False
         prev_tr = None
 
-        def concat(val):
+        def concat(val, sep=''):
             if isinstance(val, list):
-                return ''.join(val)
+                return sep.join([str(it) for it in val])
             else:
                 return str(val)
 
@@ -171,9 +174,6 @@ class slovar(dict):
                     if val:
                         val = ObjectId(val).generation_time
 
-                elif tr == 'concat':
-                    val = concat(val)
-
                 elif tr in FUNCS:
                     prev_tr = tr
 
@@ -188,7 +188,14 @@ class slovar(dict):
                     elif prev_tr == 'index':
                         val = val[int(tr)]
 
+                    elif prev_tr == 'concat':
+                        val = concat(val, tr or '')
+
                     prev_tr = None
+
+                elif tr.startswith('@'):
+                    tr = tr[1:]
+                    val = getattr(builtins, tr)(val)
 
                 else:
                     _type = type(val)
@@ -219,25 +226,6 @@ class slovar(dict):
                                             'show_as', 'show_as_r', 'transforms', 'assignments',
                                             'star', 'flats', 'envelope'])
 
-        nested_keys = list(nested.keys())
-
-        def process_lists(flat_d, _d):
-            for nkey, nval in list(nested.items()):
-                if nkey in assignments:
-                    continue
-                if '..' in nkey:
-                    pref, suf = nkey.split('..', 1)
-                    _lst = []
-
-                    for ix in range(len(_d.get(nval, []))):
-                        kk = '%s.%s.%s'%(pref,ix,suf)
-                        _lst.append(flat_d.get(kk))
-                        ix+=1
-
-                    new_key = show_as.get(nkey,'%s.%s'%(pref,suf))
-                    nested_keys.append(new_key)
-                    flat_d[new_key] = _lst
-
         def process_assignments(_d):
             for kk, vv in assignments.items():
                 trans.pop(kk, None)
@@ -265,16 +253,38 @@ class slovar(dict):
 
                 else:
                     trs = split_strip(tr, '|')
-                    _d[kk] = tcast(_d, kk, trs, val) if trs else val
+                    _d[kk] = self.tcast(kk, val, trs) if trs else val
+
+            return _d
 
         def process_nested(_d):
             if not nested:
-                return
+                return _d
+
+            nested_keys = list(nested.keys())
+
+            def process_lists(flat_d, _d):
+                for nkey, nval in list(nested.items()):
+                    if nkey in assignments:
+                        continue
+                    if '..' in nkey:
+                        pref, suf = nkey.split('..', 1)
+                        _lst = []
+
+                        for ix in range(len(_d.get(nval, []))):
+                            kk = '%s.%s.%s'%(pref,ix,suf)
+                            _lst.append(flat_d.get(kk))
+                            ix+=1
+
+                        new_key = show_as.get(nkey,'%s.%s'%(pref,suf))
+                        nested_keys.append(new_key)
+                        flat_d[new_key] = _lst
+
+                return flat_d
 
             flat_d = self.flat(keep_lists=0)
-            process_lists(flat_d, _d)
-            flat_d = flat_d.subset(nested_keys)
-            _d = _d.remove(list(nested.values())).update(flat_d)
+            flat_d = process_lists(flat_d, _d).subset(nested_keys)
+            return _d.remove(list(nested.values())).update(flat_d)
 
         def process_show_as(_d):
             for new_key, key in list(show_as_r.items()):
@@ -288,18 +298,26 @@ class slovar(dict):
                     if _k not in fields: # if key in the original fields, dont pop it. e.g. `a__as__x.a,a`
                         _d.pop(_k, None)
 
+            return _d
+
         def process_trans(_d):
             for key, trs in list(trans.items()):
                 if key in _d:
                     _d[key] = self.tcast(key, _d.get(key), trs)
 
+            return _d
+
         def process_defaults(_d):
             if defaults:
                 _d = _d.flat().merge_with(slovar(defaults).flat())
 
+            return _d
+
         def process_envelope(_d):
             if envelope:
                 _d = slovar({envelope:_d})
+
+            return _d
 
         def process_star():
             if star:
@@ -308,12 +326,12 @@ class slovar(dict):
                 return self.subset(only + ['-'+e for e in exclude])
 
         _d = process_star()
-        process_assignments(_d)
-        process_nested(_d)
-        process_show_as(_d)
-        process_trans(_d)
-        process_defaults(_d)
-        process_envelope(_d)
+        _d = process_assignments(_d)
+        _d = process_nested(_d)
+        _d = process_show_as(_d)
+        _d = process_trans(_d)
+        _d = process_defaults(_d)
+        _d = process_envelope(_d)
 
         return _d.unflat()
 
@@ -518,7 +536,8 @@ class slovar(dict):
         return self.flat().get(key, *arg, **kw)
 
     def update_with(self, _dict, overwrite=True, append_to=None,
-                                append_to_set=None, flatten=None):
+                                append_to_set=None, flatten=None,
+                                merge_to=None):
 
         def process_append_to_param(_lst):
             if isinstance(_lst, str):
@@ -542,6 +561,8 @@ class slovar(dict):
 
         append_to = process_append_to_param(append_to)
         append_to_set = process_append_to_param(append_to_set)
+        merge_to = process_append_to_param(merge_to)
+
         self_dict = self.copy()
 
         def _build_list(_lst, new_val):
@@ -595,6 +616,10 @@ class slovar(dict):
                 #reverse the list so new values overwrite old ones,
                 #since it was appended at the end
                 for each in reversed(new_lst):
+                    if not each:
+                        log.debug('Empty item in the `%s:%s` list.Skip.', key, set_key)
+                        continue
+
                     if set_key not in each:
                         _not_found.append(each)
                         continue
@@ -616,6 +641,33 @@ class slovar(dict):
 
             return new_lst
 
+        def _merge_to(self_dict, key, val):
+            set_key = merge_to.get(key)
+            new_lst = []
+            new_keys = []
+
+            if not set_key:
+                raise self.bad_value_error_klass('merge_to must contain a set key')
+
+            if not isinstance(val, list):
+                val = [val]
+
+            for each in self_dict.get(key, []):
+                if each.get(set_key):
+                    for it in val:
+                        if not it.get(set_key):
+                            continue
+
+                        if it[set_key] == each[set_key]:
+                            each = each.update_with(it)
+                            break
+
+                        new_keys.append(it[set_key])
+
+                new_lst.append(each)
+
+            return new_lst
+
         if flatten:
             flat_keys = flatten if isinstance(flatten, list) else None
             self_dict = self_dict.flat(keys=flat_keys)
@@ -626,6 +678,8 @@ class slovar(dict):
                 self_dict[key] = _append_to(self_dict, key, val)
             elif key in append_to_set:
                 self_dict[key] = _append_to_set(self_dict, key, val)
+            elif key in merge_to:
+                self_dict[key] = _merge_to(self_dict, key, val)
             elif key not in self_dict:
                 self_dict[key] = val
             elif overwrite:

@@ -74,7 +74,7 @@ def asbool(dset, value):
 
 
 @parametrize
-def aslist(dset, value, sep=',', remove_empty=True, unique=False):
+def aslist(dset, value, sep=',', remove_empty=True, unique=False, itype=None):
     if isinstance(value, list):
         _lst = value
     elif isinstance(value, str):
@@ -87,6 +87,9 @@ def aslist(dset, value, sep=',', remove_empty=True, unique=False):
 
     if unique:
         _lst = list(set(_lst))
+
+    if itype:
+        _lst = [itype(it) for it in _lst]
 
     return _lst
 

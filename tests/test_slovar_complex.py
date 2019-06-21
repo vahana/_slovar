@@ -4,7 +4,7 @@ import pytest
 from slovar import slovar
 
 
-LOREM = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ut dictum nibh, non congue dolor. Nulla sollicitudin nunc ac nisl vestibulum auctor. Sed molestie dignissim feugiat. Etiam placerat justo arcu, et euismod sapien varius eu. Maecenas pellentesque, sapien non sagittis dapibus, tellus odio porttitor est, sit amet congue lorem nisl in nulla. Nullam rhoncus nisl tellus, eu sodales ligula eleifend quis. Cras accumsan in purus sit amet efficitur. Mauris et felis varius, mollis massa vel, vestibulum turpis. Vivamus euismod libero a lacus ultricies, quis convallis mauris tempus. Vivamus commodo gravida hendrerit.'
+LOREM = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ut dictum nibh, non congue dolor.'
 
 
 class TestSlovarComplex(object):
@@ -266,7 +266,6 @@ class TestSlovarComplex(object):
         assert 'd' not in d2.c
         assert d2.c.ff == 5
 
-
     def test_extract_star(self):
         d1 = slovar(
             a = 1,
@@ -281,3 +280,51 @@ class TestSlovarComplex(object):
         assert 'd.a' in d2.flat()
         assert 'd.b.c' in d2.flat()
 
+    def test_extract_assign(self):
+        d1 = slovar(
+            c = '123',
+            b='345'
+        )
+
+        d2 = d1.extract('c__as__a.c:float,b__as__a.b:float,a.dd:=dd')
+
+        assert d2.a.c == 123
+        assert d2.a.b == 345
+        assert d2.a.dd == 'dd'
+
+    def test_update_with_merge_to(self):
+        d1 = slovar(
+            a = [
+                dict(b=1, c=2),
+                dict(b=11, c=22),
+                dict(b=11, c=33),
+                dict(c=44),
+            ]
+        )
+
+        d1.update_with(slovar(a=1), merge_to='x')
+        d1.update_with(slovar(), merge_to='a:b')
+
+        with pytest.raises(Exception):
+            d1.update_with(slovar(a=1), merge_to='a')
+
+        #should not change d1 since there is not b=55 in it
+        d2 = slovar(a={'b':55, 'c': 222})
+        d3 = d1.update_with(d2, merge_to='a:b')
+        assert d3 == d1
+
+        d2 = slovar(a=[{'b':11, 'c': 222, 'd': 444}])
+        d3 = d1.update_with(d2, merge_to='a:b')
+
+
+        assert len(d3) == len(d1)
+        assert 'd' not in d1.a
+
+        assert d3.a[1]['c'] == 222
+        assert d3.a[1]['d'] == 444
+
+        assert d3.a[2]['c'] == 222
+        assert d3.a[2]['d'] == 444
+
+        d3 = d2.update_with(d1, merge_to='a:b')
+        assert d3 == d2
