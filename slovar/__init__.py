@@ -140,7 +140,6 @@ class slovar(dict):
             log.debug('extracted key %r is None' % key)
             return val
 
-        safe = False
         prev_tr = None
 
         def concat(val, sep=''):
@@ -151,8 +150,8 @@ class slovar(dict):
 
         for tr in trs:
             try:
-                if 'safe' in tr:
-                    safe = True
+                if 'safe' == tr or 'safe_none' == tr:
+                    continue
 
                 elif tr in ('str', 'unicode'):
                     val = str(val)
@@ -209,11 +208,15 @@ class slovar(dict):
 
             except:
                 import sys
-                log.error('typecast failed for key=`%s`, value=`%s`: %s' %
-                                            (key, val, sys.exc_info()[1]))
+                msg = 'typecast failed for key=`%s`, value=`%s`: %s' % (key, val, sys.exc_info()[1])
+                log.error(msg)
 
-                if not safe:
-                    raise self.bad_value_error_klass(sys.exc_info()[1])
+                if 'safe' in trs:
+                    return val
+                elif 'safe_none' in trs:
+                    return None
+                else:
+                    raise self.bad_value_error_klass(msg)
 
         return val
 
@@ -235,6 +238,8 @@ class slovar(dict):
 
                 if val == '__NOW__':
                     val = datetime.utcnow()
+                if val == '__TODAY__':
+                    val = datetime.today()
                 elif val == '__OID__':
                     val = ObjectId()
 
@@ -445,7 +450,7 @@ class slovar(dict):
 
     def has(self, keys, check_type=str,
             err='', _all=True, allow_missing=False,
-            allowed_values=[]):
+            allowed_values=[], forbidden_values=[]):
         errors = []
 
         if isinstance(keys, str):
@@ -488,6 +493,9 @@ class slovar(dict):
                     error_msg(missing_key_error(check_type, key))
                 else:
                     error_msg('Missing key: `%s`' % key)
+
+            if self_flat[key] in forbidden_values:
+                error_msg('`%s`=`%s` value is not allowed' % (key, self_flat[key]))
 
         if (errors and _all) or (not _all and len(errors) >= len(keys)):
             raise self.bad_value_error_klass('.'.join(errors))
@@ -668,12 +676,36 @@ class slovar(dict):
 
             return new_lst
 
+        def can_overwrite(key, overwrite, flat_overwrites):
+            if overwrite == True:
+                return True
+
+            if isinstance(overwrite, list):
+                if flatten == True:
+                    return True
+
+                for it in flat_overwrites:
+                    if key.startswith('%s.'%it):
+                        return True
+
+                if key in overwrite:
+                    return True
+
+            return False
+
+        flat_overwrites = set()
         if flatten:
             flat_keys = flatten if isinstance(flatten, list) else None
             self_dict = self_dict.flat(keys=flat_keys)
             _dict = _dict.flat(keys=flat_keys)
 
+            if flat_keys and isinstance(overwrite, list):
+                s_overwrites = set(overwrite)
+                flat_overwrites = (set(flat_keys) & s_overwrites)
+                overwrite = list(s_overwrites - flat_overwrites)
+
         for key, val in list(_dict.items()):
+
             if key in append_to:
                 self_dict[key] = _append_to(self_dict, key, val)
             elif key in append_to_set:
@@ -682,11 +714,8 @@ class slovar(dict):
                 self_dict[key] = _merge_to(self_dict, key, val)
             elif key not in self_dict:
                 self_dict[key] = val
-            elif overwrite:
-                if (isinstance(overwrite, bool) and overwrite is True) or \
-                                    (isinstance(overwrite, list) and key in overwrite):
-                    self_dict[key] = val
-
+            elif overwrite and can_overwrite(key, overwrite, flat_overwrites):
+                self_dict[key] = val
 
         if flatten:
             self_dict = self_dict.unflat()
@@ -701,6 +730,9 @@ class slovar(dict):
         return not other_ or self.subset(list(other_.keys())) == other_
 
     def pop_many(self, keys):
+        if not keys:
+            return self.copy()
+
         poped = self.__class__()
         pop_keys = self.extract(keys).keys()
         for key in pop_keys:
