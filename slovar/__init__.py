@@ -238,10 +238,12 @@ class slovar(dict):
 
                 if val == '__NOW__':
                     val = datetime.utcnow()
-                if val == '__TODAY__':
+                elif val == '__TODAY__':
                     val = datetime.today()
                 elif val == '__OID__':
-                    val = ObjectId()
+                    val = str(ObjectId())
+                elif val == '__NULL__':
+                    val = {}
 
                 if '..' in kk:
                     list_key, new_key = kk.split('..')
@@ -408,13 +410,26 @@ class slovar(dict):
         return _d
 
     def remove(self, keys, flat=False):
+
+        def _remove_branch(path, _d):
+            for key in list(_d.keys()):
+                if key.startswith(path):
+                    _d.pop(key)
+
         if isinstance(keys, str):
             keys = [keys]
 
         _self = self.flat() if flat else self.copy()
 
         for k in keys:
-            _self.pop(k, None)
+            if '*' in k:
+                if not flat:
+                    raise KeyError('Pass flat=True if removing by *')
+
+                _remove_branch(k.replace('*', ''), _self)
+            else:
+                _self.pop(k, None)
+
         return _self.unflat() if flat else _self
 
     def update(self, d_):
