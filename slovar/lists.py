@@ -32,7 +32,7 @@ def process_fields(fields, parse=True):
     flats = []
     envelope = None
     star = False
-    negative = False
+    exclude_field = False
 
     if isinstance(fields, str):
         fields = split_strip(fields)
@@ -61,7 +61,7 @@ def process_fields(fields, parse=True):
 
         if field[0] == '-':
             field = field[1:]
-            negative = True
+            exclude_field = True
 
         if parse and '__as__' in field:
             root,_,val = field.partition('__as__')
@@ -85,8 +85,9 @@ def process_fields(fields, parse=True):
             nested[field] = root
             field = root
 
-        if negative:
+        if exclude_field:
             fields_exclude.append(field)
+            exclude_field=False
         else:
             fields_only.append(field)
 

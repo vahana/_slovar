@@ -4,7 +4,7 @@ import pytest
 from slovar import slovar
 
 
-LOREM = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ut dictum nibh, non congue dolor.'
+LOREM = 'Lorem'
 
 
 class TestSlovarComplex(object):
@@ -73,15 +73,17 @@ class TestSlovarComplex(object):
         assert _d.extract('a,b', defaults={'b':3}) == {'a':1, 'b':2}
 
     def test_extract_nested(self):
-        d = slovar(self.sample_d)
+        dd = slovar(self.sample_d)
         args = ['a', 'b', 'c', 'd.ii.*']
-        assert d.extract(['a', 'b', 'c', 'd.ii.*']) == {
+        assert dd.extract(['a', 'b', 'c', 'd.ii.*']) == {
             'a': self.sample_d['a'],
             'b': self.sample_d['b'],
             'c': self.sample_d['c'],
             'aa': self.sample_d['d']['ii']['aa'],
             'ab': self.sample_d['d']['ii']['ab'],
         }
+
+        import ipdb;ipdb.set_trace()
 
     def test_extract_exclude(self):
         d = slovar(self.sample_d)
