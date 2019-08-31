@@ -18,22 +18,11 @@ class TestSlovarComplex(object):
                 'aa': LOREM,
                 'ab': [5, 6, [7, 8, 9]],
             },
-            'iii': [
+            'iii': [1,2,3,4],
+            'iiii': [
                 {'j': LOREM},
                 {'jj': LOREM},
             ]
-        },
-        e={
-            'i': LOREM,
-            'ii': LOREM,
-            'iii': LOREM,
-            'iv': LOREM,
-            'v': LOREM,
-            'vi': LOREM,
-            'vii': LOREM,
-            'viii': LOREM,
-            'ix': LOREM,
-            'x': LOREM,
         },
         f=[[1, 2, 3], 4, 5],
         g=[1, 2, 4, [4, 5], 6],
@@ -74,16 +63,18 @@ class TestSlovarComplex(object):
 
     def test_extract_nested(self):
         dd = slovar(self.sample_d)
-        args = ['a', 'b', 'c', 'd.ii.*']
-        assert dd.extract(['a', 'b', 'c', 'd.ii.*']) == {
-            'a': self.sample_d['a'],
-            'b': self.sample_d['b'],
-            'c': self.sample_d['c'],
-            'aa': self.sample_d['d']['ii']['aa'],
-            'ab': self.sample_d['d']['ii']['ab'],
-        }
 
-        import ipdb;ipdb.set_trace()
+        #get nested dict
+        _d = dd.extract(['a', 'b', 'c', 'd.ii'])
+        assert set(_d.flat().keys()) == set(['a', 'b', 'c', 'd.ii.aa', 'd.ii.ab'])
+
+        #get nested list
+        _d = dd.extract(['a', 'b', 'c', 'd.ii.ab'])
+        assert set(_d.flat().keys()) == set(['a', 'b', 'c', 'd.ii.ab'])
+
+        #get nested list item
+        _d = dd.extract(['a', 'b', 'c', 'd.ii.ab.2'])
+        assert set(_d.flat().keys()) == set(['a', 'b', 'c', 'd.ii.ab.2'])
 
     def test_extract_exclude(self):
         d = slovar(self.sample_d)
@@ -169,7 +160,6 @@ class TestSlovarComplex(object):
         d3 = d1.update_with({'x':1}, append_to='x')
         assert 'x' in d3
 
-    # @pytest.mark.skip('this is a bug. fix and enable.')
     def test_update_with_append_to_set2(self):
         d1 = slovar(
             a = [],
@@ -288,7 +278,7 @@ class TestSlovarComplex(object):
             b='345'
         )
 
-        d2 = d1.extract('c__as__a.c:float,b__as__a.b:float,a.dd:=dd')
+        d2 = d1.extract('c__as__a.c:float,b__as__a.b:float,a.dd:=dd').unflat()
 
         assert d2.a.c == 123
         assert d2.a.b == 345
@@ -318,7 +308,6 @@ class TestSlovarComplex(object):
         d2 = slovar(a=[{'b':11, 'c': 222, 'd': 444}])
         d3 = d1.update_with(d2, merge_to='a:b')
 
-
         assert len(d3) == len(d1)
         assert 'd' not in d1.a
 
@@ -329,4 +318,4 @@ class TestSlovarComplex(object):
         assert d3.a[2]['d'] == 444
 
         d3 = d2.update_with(d1, merge_to='a:b')
-        assert d3 == d2
+        assert d3.a[0]['c'] == 33

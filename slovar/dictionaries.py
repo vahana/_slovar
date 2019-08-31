@@ -8,11 +8,15 @@ def _extend_list(_list, length):
             _list.append({})
 
 
-def unflat(_dict):
+def unflat(_dict, only=[]):
     result = {}
 
     try:
         for dotted_path, leaf_value in list(_dict.items()):
+            if only and dotted_path not in only:
+                result[dotted_path]=leaf_value
+                continue
+
             path = dotted_path.split('.')
             ctx = result
             # Last item is a leaf, we save time by doing it outside the loop

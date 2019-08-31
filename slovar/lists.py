@@ -91,9 +91,6 @@ def process_fields(fields, parse=True):
         else:
             fields_only.append(field)
 
-    if star:
-        fields_only = []
-        fields_exclude =[]
 
     return slovar({
              'fields': fields,
