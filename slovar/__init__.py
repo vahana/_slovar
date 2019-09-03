@@ -269,7 +269,7 @@ class slovar(dict):
             for new_key, key in list(op.show_as_r.items()):
                 try:
                     _d_show_as.update(slovar({new_key:_d.nested_get(key)}))
-                except KeyError:
+                except (KeyError,IndexError):
                     pass
 
             if op.star:
