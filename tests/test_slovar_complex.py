@@ -73,8 +73,8 @@ class TestSlovarComplex(object):
         assert set(_d.flat().keys()) == set(['a', 'b', 'c', 'd.ii.ab'])
 
         #get nested list item
-        _d = dd.extract(['a', 'b', 'c', 'd.ii.ab.2'])
-        assert set(_d.flat().keys()) == set(['a', 'b', 'c', 'd.ii.ab.2'])
+        _d = dd.extract(['d.ii.ab.2'])
+        assert set(_d.flat().keys()) == set(['d.ii.ab'])
 
     def test_extract_exclude(self):
         d = slovar(self.sample_d)
@@ -258,7 +258,7 @@ class TestSlovarComplex(object):
         assert 'd' not in d2.c
         assert d2.c.ff == 5
 
-    def test_extract_star(self):
+    def test_extract_envelope(self):
         d1 = slovar(
             a = 1,
             b = slovar(c = 2)
@@ -279,7 +279,6 @@ class TestSlovarComplex(object):
         )
 
         d2 = d1.extract('c__as__a.c:float,b__as__a.b:float,a.dd:=dd').unflat()
-
         assert d2.a.c == 123
         assert d2.a.b == 345
         assert d2.a.dd == 'dd'
@@ -319,3 +318,140 @@ class TestSlovarComplex(object):
 
         d3 = d2.update_with(d1, merge_to='a:b')
         assert d3.a[0]['c'] == 33
+
+    def test_unflat_extract(self):
+        d1 = slovar({
+                'a.b':1,
+                'a.c': 2,
+                'a.d':[1,2],
+                'e': 1})
+
+        d2 = d1.unflat().extract('a.b')
+        assert 'a' in d2
+        assert 'a.b' not in d2
+
+        d2 = d1.extract(['a.b'])
+        assert 'a.b' in d2
+        assert d2['a.b'] == 1
+        assert 'a.c' not in d2
+
+        d2 = d1.unflat().extract('a')
+        assert d2.set_keys() == set(['a'])
+
+        d2 = d1.extract('a.d')
+        assert d2.set_keys() == set(['a.d'])
+
+        d2 = d1.unflat().extract('a.d')
+        assert d2.flat().set_keys() == set(['a.d'])
+
+    def test_subset2(self):
+        d1 = slovar({
+                'a.b':1,
+                'a.c': 2,
+                'a.d.d':[1,2],
+                'e': 1,
+            }).unflat()
+
+        d2 = d1.subset('a.d.d,a.*')
+        assert d2.set_keys() == set(['a', 'b', 'c', 'd'])
+        assert d2.a.d.d == d2.d.d
+
+    def test_reduce_extract(self):
+        d1 = slovar({
+                'a.b':1,
+                'a.c': 2,
+                'a.d.d':[1,2],
+                'e': 1}).unflat()
+
+        d2 = d1.extract('a.*')
+        assert d2.set_keys() == set(['b', 'c', 'd'])
+
+        d2 = d1.flat().extract('a.*')
+        assert d2.set_keys() == set()
+
+        d2 = d1.extract('a.d.d__as__dd,a.d.*')
+        assert d2.flat().set_keys() == set(['dd', 'd'])
+
+    def test_show_as(self):
+        d1 = slovar({
+                'a.b':1,
+                'a.c': 2,
+                'a.d.dd':[1,2],
+                'a.d.bb': 'bb',
+                'e': 1}).unflat()
+
+        d2 = d1.extract('a.d.dd__as__dlist')
+        assert d2.set_keys() == set(['dlist'])
+
+        d2 = d1.flat().extract('a.d.dd__as__dlist')
+        assert d2.set_keys() == set(['dlist'])
+
+        d2 = d1.extract('a.d.dd__as__dlist, a.d.dd')
+        assert d2.set_keys() == set(['dlist', 'a'])
+
+    def test_star(self):
+        d1 = slovar({
+                'a.b':1,
+                'a.c': 2,
+                'a.d.dd':[1,2],
+                'e': 1}).unflat()
+
+        d2 = d1.extract('a.d.dd__as__aa,*')
+        assert d2.set_keys() == set(['aa', 'a', 'e'])
+
+    def test_flat(self):
+        d1 = slovar({
+                'a.b':1,
+                'a.c': 2,
+                'a.d.dd':[1,2],
+                'e': 1}).unflat()
+
+        d2 = d1.flat(['a'])
+        assert d2.set_keys() == set(['a.b', 'a.c', 'a.d.dd', 'e'])
+
+    def test_nested_get(self):
+        d1 = slovar({
+            'e':[{'ee': 1, 'xx': 1}, {'ee': 2, 'yy': 1}]
+        }).unflat()
+
+        d2 = d1.nested_get('e.ee')
+        assert set(d2) == set([1,2])
+
+    def test_nested_pop(self):
+        d1 = slovar({
+                'a.b':1,
+                'a.c': 2,
+                'a.d.dd':[1,2],
+                'e': 1}).unflat()
+
+        d2 = d1.nested_pop('a.d.dd.0')
+        assert d2.a.d.dd[0] == 2
+        assert len(d2.a.d.dd) == 1
+
+        assert 'a.d.dd' in d1.flat()
+        d2 = d1.nested_pop('a.d.dd')
+        assert 'a.d.dd' not in d2.flat()
+
+        d2 = d1.nested_pop('a.d')
+        d2 = d1.nested_pop('a')
+
+    def test_complex1(self):
+        d1 = slovar({
+            'a': 1,
+            'b': [1,2,3],
+            'c.c': '1',
+            'c.cc': [11,22,32],
+            'd.d.d': 1,
+            'd.d.dd': [111,222,333],
+            'e':[{'ee': 1}, {'ee': 2}]
+        }).unflat()
+
+        fields = ['a', 'b', 'c.c__as__cc:int',
+                                  'd.d', 'd.d.dd__as__ddd',
+                                  'e.1',
+                                  'g.g:=ggg'
+                                  ]
+
+        d2 = d1.extract(fields, defaults={'f': 1})
+        assert d2.set_keys() == set(['a', 'b', 'cc', 'd', 'ddd', 'e', 'f', 'g'])
+

@@ -8,7 +8,7 @@ def _extend_list(_list, length):
             _list.append({})
 
 
-def unflat(_dict, only=[]):
+def unflat(_dict, only=[], sep='.'):
     result = {}
 
     try:
@@ -17,7 +17,7 @@ def unflat(_dict, only=[]):
                 result[dotted_path]=leaf_value
                 continue
 
-            path = dotted_path.split('.')
+            path = dotted_path.split(sep)
             ctx = result
             # Last item is a leaf, we save time by doing it outside the loop
             for i, part in enumerate(path[:-1]):
@@ -58,17 +58,17 @@ def unflat(_dict, only=[]):
     return result
 
 
-def flat(_dict, base_key='', keep_lists=False):
+def flat(_dict, base_key='', keep_lists=False, sep='.'):
     result = {}
     # Make a dict regardless, ints as keys for a list
     try:
         iterable = _dict if isinstance(_dict, dict) else dict(enumerate(_dict))
         for key, value in list(iterable.items()):
-            # Join keys but prevent keys from starting by '.'
-            dotted_key = key if not base_key else '.'.join([base_key, str(key)])
+            # Join keys but prevent keys from starting by `sep`
+            dotted_key = key if not base_key else sep.join([base_key, str(key)])
             # Recursion if we find a dict or list, except if we're keeping lists
             if isinstance(value, dict) or (isinstance(value, list) and not keep_lists):
-                result.update(flat(value, base_key=dotted_key, keep_lists=keep_lists))
+                result.update(flat(value, base_key=dotted_key, keep_lists=keep_lists, sep=sep))
             # Otherwise just set attribute
             else:
                 result[dotted_key] = value
@@ -80,7 +80,8 @@ def flat(_dict, base_key='', keep_lists=False):
 
 
 def merge(d1, d2, path=None):
-    if path is None: path = []
+    if path is None:
+        path = []
 
     for key in d2:
         if key in d1:

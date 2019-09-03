@@ -2,7 +2,7 @@ from datetime import datetime
 import pytest
 
 from slovar import slovar
-from slovar.dictionaries import merge
+from slovar.dictionaries import merge, flat, unflat
 from slovar.strings import snake2camel
 from slovar.lists import expand_list
 
@@ -205,5 +205,3 @@ class TestSlovar():
         dd = slovar(c=[0,1,2])
         ddd = slovar(c=[1,2]).diff(dd)
         assert ddd.c == [0,1,2]
-
-

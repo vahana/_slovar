@@ -35,8 +35,6 @@ class slovar(dict):
         dset.subset(['a']) == {'a':1} == dset.subset('-b')
 
     """
-    # Note: We use self.__class__ to return new instances of subclasses
-    # instead of slovar when necessary
 
     @classmethod
     def to_dicts(cls, iterable, fields):
@@ -96,8 +94,8 @@ class slovar(dict):
             return super().__setattr__(key,val)
 
         #this makes a.b.c access work for nested slovars
-        if isinstance(val, dict) and not isinstance(val, self.__class__):
-            val = self.__class__(val)
+        if isinstance(val, dict) and not isinstance(val, slovar):
+            val = slovar(val)
         self[key] = val
 
     def __delattr__(self, key):
@@ -132,7 +130,7 @@ class slovar(dict):
         return slovar(dct)
 
     def copy(self):
-        return self.__class__(super(slovar, self).copy())
+        return slovar(super(slovar, self).copy())
 
     def tcast(self, key, val, trs):
 
@@ -220,7 +218,9 @@ class slovar(dict):
 
         return val
 
+
     def extract(self, fields, defaults=None):
+
         if not fields:
             return self
 
@@ -229,7 +229,6 @@ class slovar(dict):
         def process_assignments(_d):
             for kk, vv in op.assignments.items():
                 op.transforms.pop(kk, None)
-                op.nested.pop(kk, None)
 
                 val, _, tr = vv.partition(':')
 
@@ -261,27 +260,36 @@ class slovar(dict):
 
             return _d
 
-        def process_nested(_d):
-            if not op.nested:
+        def process_show_as(_d):
+            if not op.show_as_r:
                 return _d
 
-            return _d.remove(list(op.nested.values())).update(
-                    _d.subset(list(op.nested.keys()))
-                )
+            _d_show_as = slovar()
 
-        def process_show_as(_d):
             for new_key, key in list(op.show_as_r.items()):
-                if key in _d:
-                    #reverse merge to keep all show_as values and merge the rest
-                    _d = self.__class__({new_key:_d.get(key)}).merge(_d)
+                try:
+                    _d_show_as.update(slovar({new_key:_d.nested_get(key)}))
+                except KeyError:
+                    pass
 
-            if not op.star: # if no star then dont keep the "original" keys
-                #remove original keys
-                for _k in list(op.show_as_r.values()):
-                    if _k not in op.fields: # if key in the original fields, dont pop it. e.g. `a__as__x.a,a`
-                        _d.pop(_k, None)
+            if op.star:
+                return _d_show_as.merge(_d)
 
-            return _d
+            unflat_lst = []
+
+            for kk, count in collections.Counter(op.exp_only).items():
+                if kk in op.show_as and count==1:
+                    continue
+
+                if '.' in kk:
+                    unflat_lst.append(kk)
+
+                _d_show_as.update(_d.subset(kk))
+
+            if unflat_lst:
+                return _d_show_as.unflat(unflat_lst)
+
+            return _d_show_as
 
         def process_trans(_d):
             for key, trs in list(op.transforms.items()):
@@ -290,9 +298,15 @@ class slovar(dict):
 
             return _d
 
+        def process_flats(_d):
+            for fld, keep in op.flats.items():
+                _d = _d.flat([fld], keep_lists=keep)
+
+            return _d
+
         def process_defaults(_d):
             if defaults:
-                _d = _d.flat().merge_with(slovar(defaults).flat())
+                _d = _d.update_with(defaults, overwrite=False)
 
             return _d
 
@@ -302,17 +316,11 @@ class slovar(dict):
 
             return _d
 
-        def process_star():
-            if op.star:
-                return self
-            else:
-                return self.subset(op.only + ['-'+e for e in op.exclude])
-
-        _d = process_star()
+        _d = self._subset(op)
         _d = process_assignments(_d)
-        _d = process_nested(_d)
         _d = process_show_as(_d)
         _d = process_trans(_d)
+        _d = process_flats(_d)
         _d = process_defaults(_d)
         _d = process_envelope(_d)
 
@@ -324,90 +332,79 @@ class slovar(dict):
         else:
             prefixes = prefix
 
-        _d = self.__class__()
-        for k, v in list(self.items()):
+        _d = slovar()
+        for kk, vv in list(self.items()):
             for pref in prefixes:
                 _pref = pref[:-1]
 
                 if pref.endswith('*'):
-                    if k.startswith(_pref):
+                    if kk.startswith(_pref):
                         ix = _pref.rfind('.')
                         if ix > 0:
                             _pref = _pref[:ix]
-                            k = k[len(_pref)+1:]
-                        _d[k] = v
+                            kk = kk[len(_pref)+1:]
+                        _d[kk] = vv
                 else:
-                    if k == pref:
+                    if kk == pref:
                         ix = _pref.rfind('.')
                         if ix > 0:
                             _pref = _pref[:ix]
-                            k = k[len(_pref)+1:]
+                            kk = kk[len(_pref)+1:]
 
-                        _d[k]=v
+                        _d[kk]=vv
 
-        return _d.unflat()
+        return _d
 
-    def subset(self, keys, defaults=None):
+    def _subset(self, op):
 
-        if keys is None:
-            return self
-        elif not keys:
-            return slovar()
+        _d = slovar()
 
-        op = process_fields(keys, parse=False)
-        _d = self.copy()
+        if op.star:
+            _d = self.copy()
 
-        def _parse(op_flds):
-            _d = slovar(prefixed=[], exact=[])
-
-            for it in op_flds:
-                if it.endswith('*'):
-                    _d.prefixed.append(it)
+        if op.exp_only:
+            nested_flds = []
+            for fld in op.exp_only:
+                if fld in self:
+                    _d[fld] = self[fld]
                 else:
-                    _d.exact.append(it)
+                    try:
+                        if fld.endswith('.*'):
+                            val = self.nested_get(fld)
+                            if isinstance(val, dict):
+                                _d.update(val)
+                            else:
+                                raise self.bad_value_error_klass('%s must be dict, got %s' % (val, type(val)))
+                        elif fld.endswith('*'):
+                            _d.update(self.get_by_prefix(fld))
+                        else:
+                            _d[fld] = self.nested_get(fld)
 
-            return _d
+                        nested_flds.append(fld)
+                    except (KeyError, IndexError):
+                        pass
 
-        def _nested_get(_d, keys):
-            for kk in keys.split('.'):
-                if isinstance(_d, list):
-                    kk = int(kk)
-
-                _d = _d[kk]
-
-            return _d
-
-        if op.only:
-            if not op.star:
-                onl = _parse(op.only)
-                if onl.exact:
-                    _d = slovar()
-                    for fld in onl.exact:
-                        try:
-                            _d[fld] = _nested_get(self, fld)
-                        except KeyError:
-                            pass
-
-                if onl.prefixed:
-                    _d = _d.update_with(_d.get_by_prefix(onl.prefixed))
+            if nested_flds and isinstance(_d, dict):
+                _d = _d.unflat(nested_flds)
 
         if op.exclude:
-            onl = _parse(op.exclude)
+            _d = _d or self
+            _d = _d.remove(op.exclude)
 
-            if onl.exact:
-                _d = _d.remove(onl.exact)
+        return _d
 
-            if onl.prefixed:
-                _d = _d.remove(_d.get_by_prefix(onl.prefixed).keys())
+    def subset(self, keys, defaults={}):
+        if not keys:
+            return slovar()
 
-        return _d.update_with(defaults, overwrite=False)
+        return self._subset(process_fields(keys)).merge_with(defaults)
 
     def remove(self, keys, flat=False):
 
         def _remove_branch(path, _d):
             for key in list(_d.keys()):
                 if key.startswith(path):
-                    _d.pop(key)
+                    _d = _d.pop(key)
 
         if isinstance(keys, str):
             keys = [keys]
@@ -416,9 +413,6 @@ class slovar(dict):
 
         for k in keys:
             if '*' in k:
-                if not flat:
-                    raise KeyError('Pass flat=True if removing by *')
-
                 _remove_branch(k.replace('*', ''), _self)
             else:
                 _self.pop(k, None)
@@ -426,7 +420,7 @@ class slovar(dict):
         return _self.unflat() if flat else _self
 
     def update(self, d_):
-        super(slovar, self).update(self.__class__(d_))
+        super(slovar, self).update(slovar(d_))
         return self
 
     def merge(self, d_):
@@ -442,11 +436,62 @@ class slovar(dict):
                 self.pop(k)
         return self
 
+    def nested_get(self, fld):
+        _d = self.copy()
+
+        if fld in _d or '.' not in fld:
+            return _d[fld]
+
+        for kk in fld.split('.'):
+            if '*' == kk:
+                break
+            # if its a list then access it by index
+            if isinstance(_d, list):
+                if kk.isdigit():
+                    kk = int(kk)
+                else:
+                    val_lst = []
+                    for it in _d:
+                        if isinstance(it, slovar):
+                           val_lst.append(it.nested_get(kk))
+                    return val_lst
+
+            _d = _d[kk]
+
+        return _d
+
+    def nested_pop(self, fld):
+        self_d = self.copy()
+
+        if fld in self or '.' not in fld:
+            self_d.pop(fld)
+            return self_d
+
+        parts = fld.split('.')
+        _d = self_d
+
+        for kk in parts[:-1]:
+            if isinstance(_d, list):
+                kk = int(kk)
+            _d = _d[kk]
+
+        try:
+            kk = parts[-1]
+            if isinstance(_d, list):
+                kk = int(kk)
+            _d.pop(kk)
+
+        except (KeyError, IndexError) as e:
+            pass
+
+        return self_d
+
+
     def get_tree(self, prefix, defaults={}, sep='.'):
         if prefix[-1] != '.':
             prefix += sep
 
-        _dict = self.__class__(defaults)
+        _dict = slovar(defaults)
         for key, val in list(self.items()):
             if key.startswith(prefix):
                 _k = key.partition(prefix)[-1]
@@ -511,7 +556,7 @@ class slovar(dict):
         return True
 
     def transform(self, rules):
-        _d = self.__class__()
+        _d = slovar()
         flat_dict = self.flat()
 
         for path, val in list(flat_dict.items()):
@@ -520,27 +565,27 @@ class slovar(dict):
 
         return _d
 
-    def flat_keys(self, keys, keep_lists=True):
-        self_copy = self.copy()
+    def flat_keys(self, keys, keep_lists=True, sep='.'):
+        self_ = self.copy()
         for key in keys:
-            val = self_copy.extract(key)
+            val = self_.subset(key)
             if val and isinstance(val, dict):
-                self_copy.pop(key, None)
-                self_copy.update(val.flat(keep_lists=keep_lists))
+                self_ = self_.nested_pop(key)
+                self_.update(val.flat(keep_lists=keep_lists, sep=sep))
 
-        return self_copy
+        return self_
 
-    def flat(self, keys=[], keep_lists=True):
+    def flat(self, keys=[], keep_lists=True, sep='.'):
         if keys:
-            return self.flat_keys(keys, keep_lists=keep_lists)
+            return self.flat_keys(keys, keep_lists=keep_lists, sep=sep)
 
-        return self.__class__(flat(self, keep_lists=keep_lists))
+        return slovar(flat(self, keep_lists=keep_lists, sep=sep))
 
     def unflat(self, only=[]):
-        return self.__class__(unflat(self, only))
+        return slovar(unflat(self, only))
 
     def set_default(self, name, val):
-        cls = self.__class__
+        cls = slovar
         if name not in self.flat():
             self.merge(cls.from_dotted(name, val))
         return val
@@ -742,7 +787,7 @@ class slovar(dict):
         if not keys:
             return self.copy()
 
-        poped = self.__class__()
+        poped = slovar()
         pop_keys = self.extract(keys).keys()
         for key in pop_keys:
             poped[key] = self.pop(key, None)
@@ -878,3 +923,6 @@ class slovar(dict):
 
     def json(self):
         return json_dumps(self)
+
+    def set_keys(self):
+        return set(self.keys())
