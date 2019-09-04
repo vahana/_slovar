@@ -377,8 +377,7 @@ class TestSlovarComplex(object):
                 'a.b':1,
                 'a.c': 2,
                 'a.d.dd':[1,2],
-                'a.d.bb': 'bb',
-                'e': 1}).unflat()
+                'a.d.bb': 'bb'}).unflat()
 
         d2 = d1.extract('a.d.dd__as__dlist')
         assert d2.set_keys() == set(['dlist'])
