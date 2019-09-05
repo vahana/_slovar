@@ -18,21 +18,21 @@ def expand_list(param):
     return _new
 
 
-def process_fields(fields, parse=True):
+def process_fields(fields):
     # Avoid circular dependencies
     from slovar import slovar
 
     fields_only = []
     fields_exclude = []
-    nested = {}
     show_as = {}
     show_as_r = {}
     transforms = {}
     assignments = {}
-    flats = []
+    flats = {}
     envelope = None
     star = False
-    negative = False
+    exclude_field = False
+    exp_only = []
 
     if isinstance(fields, str):
         fields = split_strip(fields)
@@ -55,15 +55,11 @@ def process_fields(fields, parse=True):
         field,_,trans = field.partition(':')
         trans = trans.split('|') if trans else []
 
-        if 'flat' in trans:
-            flats.append(field)
-            trans.remove('flat')
-
         if field[0] == '-':
             field = field[1:]
-            negative = True
+            exclude_field = True
 
-        if parse and '__as__' in field:
+        if '__as__' in field:
             root,_,val = field.partition('__as__')
             if not root and val:
                 envelope = val
@@ -76,36 +72,48 @@ def process_fields(fields, parse=True):
 
         if trans:
             if field in show_as:
-                transforms[show_as[field]] = trans
+                tr_field = show_as[field]
             else:
-                transforms[field] = trans
+                tr_field = field
 
-        if parse and '.' in field:
+            if 'flat' in trans:
+                flats[tr_field] = 1
+                trans.remove('flat')
+
+            elif 'flat_all' in trans:
+                flats[tr_field] = 0
+                trans.remove('flat_all')
+
+            else:
+                transforms[tr_field] = trans
+
+
+        if '.' in field:
             root = field.split('.')[0]
-            nested[field] = root
-            field = root
-
-        if negative:
-            fields_exclude.append(field)
         else:
-            fields_only.append(field)
+            root = field
 
-    if star:
-        fields_only = []
-        fields_exclude =[]
+        if exclude_field:
+            fields_exclude.append(root)
+            exclude_field=False
+        else:
+            fields_only.append(root)
+            exp_only.append(field)
+
 
     return slovar({
              'fields': fields,
              'only': fields_only,
              'exclude':fields_exclude,
-             'nested': nested,
              'show_as': show_as,
              'show_as_r': show_as_r,
              'transforms': transforms,
              'assignments': assignments,
              'star': star,
              'flats': flats,
-             'envelope': envelope})
+             'envelope': envelope,
+             'exp_only': exp_only,
+             })
 
 
 def union_fields(f1, f2):
