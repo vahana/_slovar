@@ -21,7 +21,7 @@ def parse_func_params(s):
         return []
 
 TCAST_NONE = True
-FUNCS = ['sort', 'index', 'concat']
+TCAST_FUNCS = ['sort', 'index', 'concat', 'slice']
 
 log = logging.getLogger(__name__)
 
@@ -171,7 +171,7 @@ class slovar(dict):
                     if val:
                         val = ObjectId(val).generation_time
 
-                elif tr in FUNCS:
+                elif tr in TCAST_FUNCS:
                     prev_tr = tr
 
                 elif prev_tr:
@@ -187,6 +187,9 @@ class slovar(dict):
 
                     elif prev_tr == 'concat':
                         val = concat(val, tr or '')
+
+                    elif prev_tr == 'slice':
+                        val = val[:int(tr)]
 
                     prev_tr = None
 
@@ -217,7 +220,6 @@ class slovar(dict):
                     raise self.bad_value_error_klass(msg)
 
         return val
-
 
     def extract(self, fields, defaults=None):
 
@@ -275,19 +277,12 @@ class slovar(dict):
             if op.star:
                 return _d_show_as.merge(_d)
 
-            unflat_lst = []
-
             for kk, count in collections.Counter(op.exp_only).items():
-                if kk in op.show_as and count==1:
-                    continue
-
-                if '.' in kk:
-                    unflat_lst.append(kk)
+                if kk in op.show_as:
+                    if len(op.show_as[kk]) == count:
+                        continue
 
                 _d_show_as.update(_d.subset(kk))
-
-            if unflat_lst:
-                return _d_show_as.unflat(unflat_lst)
 
             return _d_show_as
 
@@ -295,12 +290,17 @@ class slovar(dict):
             for key, trs in list(op.transforms.items()):
                 if key in _d:
                     _d[key] = self.tcast(key, _d.get(key), trs)
-
             return _d
 
         def process_flats(_d):
             for fld, keep in op.flats.items():
                 _d = _d.flat([fld], keep_lists=keep)
+
+            return _d
+
+        def process_unflats(_d):
+            if op.unflats:
+                _d = _d.unflat(op.unflats)
 
             return _d
 
@@ -317,12 +317,13 @@ class slovar(dict):
             return _d
 
         _d = self._subset(op)
-        _d = process_assignments(_d)
-        _d = process_show_as(_d)
-        _d = process_trans(_d)
         _d = process_flats(_d)
+        _d = process_show_as(_d)
+        _d = process_assignments(_d)
+        _d = process_trans(_d)
         _d = process_defaults(_d)
         _d = process_envelope(_d)
+        _d = process_unflats(_d)
 
         return _d
 
@@ -356,15 +357,16 @@ class slovar(dict):
         return _d
 
     def _subset(self, op):
-
         _d = slovar()
 
         if op.star:
             _d = self.copy()
 
-        if op.exp_only:
+        exp_only = op.exp_only[:]
+
+        if exp_only:
             nested_flds = []
-            for fld in op.exp_only:
+            for fld in exp_only:
                 if fld in self:
                     _d[fld] = self[fld]
                 else:
@@ -372,6 +374,12 @@ class slovar(dict):
                         if fld.endswith('.*'):
                             val = self.nested_get(fld)
                             if isinstance(val, dict):
+                                # checking if val keys will overwrite the self
+                                # conflict = self.set_keys() & val.set_keys()
+                                # if conflict and op.star:
+                                #     raise self.missing_key_error_klass(
+                                #         'conflict with `%s` field. Reducing to a existing name' % conflict)
+                                op.exp_only.extend(val.keys())
                                 _d.update(val)
                             else:
                                 raise self.bad_value_error_klass('%s must be dict, got %s' % (val, type(val)))
@@ -925,4 +933,5 @@ class slovar(dict):
         return json_dumps(self)
 
     def set_keys(self):
+        #useful for testing mainly
         return set(self.keys())

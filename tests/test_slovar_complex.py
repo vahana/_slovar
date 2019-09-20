@@ -264,13 +264,16 @@ class TestSlovarComplex(object):
             b = slovar(c = 2)
         )
 
-        d2 = d1.extract('__as__d')
-        assert 'd' in d2
-        assert d2.d == d1
-        assert 'a' not in d2
-        assert 'b' not in d2
-        assert 'd.a' in d2.flat()
-        assert 'd.b.c' in d2.flat()
+        # d2 = d1.extract('__as__d')
+        # assert 'd' in d2
+        # assert d2.d == d1
+        # assert 'a' not in d2
+        # assert 'b' not in d2
+        # assert 'd.a' in d2.flat()
+        # assert 'd.b.c' in d2.flat()
+
+        d2 = d1.extract('a,__as__d')
+        assert d2.d.set_keys() == set(['a'])
 
     def test_extract_assign(self):
         d1 = slovar(
@@ -434,7 +437,7 @@ class TestSlovarComplex(object):
         d2 = d1.nested_pop('a.d')
         d2 = d1.nested_pop('a')
 
-    def test_complex1(self):
+    def test_mix1(self):
         d1 = slovar({
             'a': 1,
             'b': [1,2,3],
@@ -452,5 +455,80 @@ class TestSlovarComplex(object):
                                   ]
 
         d2 = d1.extract(fields, defaults={'f': 1})
-        assert d2.set_keys() == set(['a', 'b', 'cc', 'd', 'ddd', 'e', 'f', 'g'])
+        assert d2.set_keys() == set(['a', 'b', 'cc', 'd', 'ddd', 'e', 'f', 'g.g'])
+
+    def test_reducer_with_show_as(self):
+        d1 = slovar({
+            'a': 1,
+            'b': [1,2,3],
+            'c.c': '1',
+            'c.cc': [11,22,32],
+            'd.d.d': 1,
+            'd.d.dd': [111,222,333],
+            'e':[{'a': {'b': 1, 'c': 2}, 'aa': 11}, {'a': {'b': 2}, 'aa': 22}]
+        }).unflat()
+
+        d2 = d1.extract('e.0.*,e.aa__as__aaa')
+        assert d2.set_keys() == set(['a', 'aa', 'aaa'])
+        assert d2['a'] == {'b': 1, 'c': 2}
+        assert d2['aaa'] == [11,22]
+
+    def test_flat_reducer(self):
+        # if fields are flat originally, extract will treat them just as normal keys, not nested.
+        # so doing nesting ops should not work
+
+        d1 = slovar({
+            'c.c': '1',
+            'c.cc': [11,22,32],
+            'd.d.d': 1,
+        })
+
+        d2 = d1.extract('c.*')
+        assert not d2
+
+        d2 = d1.extract('c*')
+        assert d2.set_keys() == set(['c.c', 'c.cc'])
+
+        d2 = d1.extract('d.d')
+        assert not d2
+
+    def test_unflat_show_as(self):
+        d1 = slovar({
+            'a': '1',
+            'b': [11,22,32],
+            'd.d': 1,
+        })
+
+        d2 = d1.extract(['a__as__aa.a', 'b__as__aa.b', 'aa:unflat', 'd.d'])
+        assert d2.set_keys() == set(['aa', 'd.d'])
+
+    def test_show_as_double(self):
+        d1 = slovar({
+            'a': '1',
+            'b': [11,22,32],
+            'd.d': 1,
+        })
+
+        d2 = d1.extract(['a__as__b', 'a__as__bb'])
+        assert d2.set_keys() == set(['b', 'bb'])
+
+
+    @pytest.mark.skip('nested trans is not implemented')
+    def test_nested_trans(self):
+        d1 = slovar({'abc': 1, 'geo': {'lat': '50.420907', 'lon': '9.414015'}})
+        d2 = d1.extract('geo.lat:float,geo.lon:float,*')
+
+        assert type(d2.geo.lat) == float
+        assert 'abc' in d2
+
+    def test_flat_unflat(self):
+        d1 = slovar({
+            'a': '1',
+            'b': [{'bb': 11},22,32],
+            'd.d': 1,
+        }).unflat()
+
+        d2 = d1.extract('b.0.bb:=111,b:flat_all|unflat')
+        assert d2.set_keys() == set(['b'])
+        assert d2.b[0]['bb'] == '111'
 

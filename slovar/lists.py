@@ -29,6 +29,7 @@ def process_fields(fields):
     transforms = {}
     assignments = {}
     flats = {}
+    unflats = []
     envelope = None
     star = False
     exclude_field = False
@@ -63,16 +64,19 @@ def process_fields(fields):
             root,_,val = field.partition('__as__')
             if not root and val:
                 envelope = val
-                star = True
                 continue
             else:
-                show_as[root] = val or root.split('.')[-1]
+                if root in show_as:
+                    show_as[root].append(val or root.split('.')[-1])
+                else:
+                    show_as[root] = [val or root.split('.')[-1]]
+
                 show_as_r[val or root.split('.')[-1]]=root
                 field = root
 
         if trans:
             if field in show_as:
-                tr_field = show_as[field]
+                tr_field = show_as[field][0]
             else:
                 tr_field = field
 
@@ -83,6 +87,10 @@ def process_fields(fields):
             elif 'flat_all' in trans:
                 flats[tr_field] = 0
                 trans.remove('flat_all')
+
+            if 'unflat' in trans:
+                trans.remove('unflat')
+                unflats.append(tr_field)
 
             else:
                 transforms[tr_field] = trans
@@ -111,6 +119,7 @@ def process_fields(fields):
              'assignments': assignments,
              'star': star,
              'flats': flats,
+             'unflats': unflats,
              'envelope': envelope,
              'exp_only': exp_only,
              })

@@ -11,49 +11,44 @@ def _extend_list(_list, length):
 def unflat(_dict, only=[], sep='.'):
     result = {}
 
-    try:
-        for dotted_path, leaf_value in list(_dict.items()):
-            if only and dotted_path not in only:
-                result[dotted_path]=leaf_value
-                continue
+    for dotted_path, leaf_value in list(_dict.items()):
+        if only and not [it for it in only if dotted_path.startswith(it)]:
+            result[dotted_path]=leaf_value
+            continue
 
-            path = dotted_path.split(sep)
-            ctx = result
-            # Last item is a leaf, we save time by doing it outside the loop
-            for i, part in enumerate(path[:-1]):
-                # If context is a list, part should be an int
-                # Testing part.isdigit() is significantly faster than isinstance(ctx, list)
-                ctx_is_list = part.isdigit()
-                if ctx_is_list:
-                    part = int(part)
-                # If the next part is an int, we need to contain a list
-                ctx_contains_list = path[i+1].isdigit()
+        path = dotted_path.split(sep)
+        ctx = result
+        # Last item is a leaf, we save time by doing it outside the loop
+        for i, part in enumerate(path[:-1]):
+            # If context is a list, part should be an int
+            # Testing part.isdigit() is significantly faster than isinstance(ctx, list)
+            ctx_is_list = part.isdigit()
+            if ctx_is_list:
+                part = int(part)
+            # If the next part is an int, we need to contain a list
+            ctx_contains_list = path[i+1].isdigit()
 
-                # Set the current node to placeholder value, {} or []
-                if not ctx_is_list and not ctx.get(part):
-                    ctx[part] = [] if ctx_contains_list else {}
+            # Set the current node to placeholder value, {} or []
+            if not ctx_is_list and not ctx.get(part):
+                ctx[part] = [] if ctx_contains_list else {}
 
-                # If we're dealing with a list, make sure it's big enough
-                # for part to be in range
-                if ctx_is_list:
-                    _extend_list(ctx, part + 1)
+            # If we're dealing with a list, make sure it's big enough
+            # for part to be in range
+            if ctx_is_list:
+                _extend_list(ctx, part + 1)
 
-                # If we're empty and contain a list
-                if not ctx[part] and ctx_contains_list:
-                    ctx[part] = []
+            # If we're empty and contain a list
+            if not ctx[part] and ctx_contains_list:
+                ctx[part] = []
 
-                ctx = ctx[part]
+            ctx = ctx[part]
 
-            leaf_key = path[-1]
-            if leaf_key.isdigit():
-                leaf_key = int(leaf_key)
-                _extend_list(ctx, leaf_key + 1)
+        leaf_key = path[-1]
+        if leaf_key.isdigit():
+            leaf_key = int(leaf_key)
+            _extend_list(ctx, leaf_key + 1)
 
-            ctx[leaf_key] = leaf_value
-    except TypeError as e:
-        log.error('Problems calling unflat on:\n%s' % _dict)
-        raise TypeError('ctx:`%s` leaf_key:`%s` leaf_value:`%s` error:`%s`' %
-                        (ctx, leaf_key, leaf_value, e))
+        ctx[leaf_key] = leaf_value
 
     return result
 
