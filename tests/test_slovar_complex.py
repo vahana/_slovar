@@ -437,6 +437,9 @@ class TestSlovarComplex(object):
         d2 = d1.nested_pop('a.d')
         d2 = d1.nested_pop('a')
 
+        d2 = d1.nested_pop(['a.b', 'e'])
+        assert d2.flat().set_keys() == set(['a.c', 'a.d.dd'])
+
     def test_mix1(self):
         d1 = slovar({
             'a': 1,
@@ -531,4 +534,14 @@ class TestSlovarComplex(object):
         d2 = d1.extract('b.0.bb:=111,b:flat_all|unflat')
         assert d2.set_keys() == set(['b'])
         assert d2.b[0]['bb'] == '111'
+
+    def test_as_star(self):
+        d1 = slovar({
+            'a': '1',
+            'b': [{'bb': 11},22,32],
+            'd.d': 1,
+        }).unflat()
+
+        d2 = d1.extract('d.d__as__d.ddd,*')
+        assert d2.flat().set_keys() == set(['d.ddd', 'a', 'b'])
 

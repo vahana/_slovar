@@ -3,6 +3,7 @@ import logging
 import collections
 import logging
 import builtins
+import copy
 from bson import ObjectId
 from datetime import datetime
 
@@ -131,6 +132,9 @@ class slovar(dict):
 
     def copy(self):
         return slovar(super(slovar, self).copy())
+
+    def deepcopy(self):
+        return copy.deepcopy(self)
 
     def tcast(self, key, val, trs):
 
@@ -274,15 +278,18 @@ class slovar(dict):
                 except (KeyError,IndexError):
                     pass
 
-            if op.star:
-                return _d_show_as.merge(_d)
-
             for kk, count in collections.Counter(op.exp_only).items():
                 if kk in op.show_as:
                     if len(op.show_as[kk]) == count:
+                        if op.star:
+                            _d = _d.nested_pop(kk)
                         continue
 
-                _d_show_as.update(_d.subset(kk))
+                if not op.star:
+                    _d_show_as.update(_d.subset(kk))
+
+            if op.star:
+                return _d_show_as.merge(_d)
 
             return _d_show_as
 
@@ -468,32 +475,38 @@ class slovar(dict):
 
         return _d
 
-    def nested_pop(self, fld):
+    def nested_pop(self, flds):
         self_d = self.copy()
 
-        if fld in self or '.' not in fld:
-            self_d.pop(fld)
-            return self_d
+        if isinstance(flds, str):
+            flds = [flds]
 
-        parts = fld.split('.')
-        _d = self_d
+        def _pop(fld):
+            if fld in self or '.' not in fld:
+                self_d.pop(fld)
+                return self_d
 
-        for kk in parts[:-1]:
-            if isinstance(_d, list):
-                kk = int(kk)
-            _d = _d[kk]
+            parts = fld.split('.')
+            _d = self_d
 
-        try:
-            kk = parts[-1]
-            if isinstance(_d, list):
-                kk = int(kk)
-            _d.pop(kk)
+            for kk in parts[:-1]:
+                if isinstance(_d, list):
+                    kk = int(kk)
+                _d = _d[kk]
 
-        except (KeyError, IndexError) as e:
-            pass
+            try:
+                kk = parts[-1]
+                if isinstance(_d, list):
+                    kk = int(kk)
+                _d.pop(kk)
+
+            except (KeyError, IndexError) as e:
+                pass
+
+        for fld in flds:
+            _pop(fld)
 
         return self_d
-
 
     def get_tree(self, prefix, defaults={}, sep='.'):
         if prefix[-1] != '.':

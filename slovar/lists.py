@@ -91,10 +91,11 @@ def process_fields(fields):
             if 'unflat' in trans:
                 trans.remove('unflat')
                 unflats.append(tr_field)
-
             else:
                 transforms[tr_field] = trans
 
+        if field in unflats:
+            continue
 
         if '.' in field:
             root = field.split('.')[0]
