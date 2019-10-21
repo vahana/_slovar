@@ -389,7 +389,7 @@ class TestSlovarComplex(object):
         assert d2.set_keys() == set(['dlist'])
 
         d2 = d1.extract('a.d.dd__as__dlist, a.d.dd')
-        assert d2.set_keys() == set(['dlist', 'a'])
+        assert d2.set_keys() == set(['dlist', 'a.d.dd'])
 
     def test_star(self):
         d1 = slovar({
@@ -454,7 +454,8 @@ class TestSlovarComplex(object):
         fields = ['a', 'b', 'c.c__as__cc:int',
                                   'd.d', 'd.d.dd__as__ddd',
                                   'e.1',
-                                  'g.g:=ggg'
+                                  'g.g:=ggg',
+                                  'd:unflat'
                                   ]
 
         d2 = d1.extract(fields, defaults={'f': 1})
@@ -538,10 +539,39 @@ class TestSlovarComplex(object):
     def test_as_star(self):
         d1 = slovar({
             'a': '1',
-            'b': [{'bb': 11},22,32],
+            'b': [{'bb': 11,},22,32],
             'd.d': 1,
         }).unflat()
 
         d2 = d1.extract('d.d__as__d.ddd,*')
         assert d2.flat().set_keys() == set(['d.ddd', 'a', 'b'])
+
+    def test_multi_nested_with_show_as(self):
+        d1 = slovar({
+            'x': 0,
+            'a.a': '1',
+            'a.b': [{'bb': 11},22,32],
+            'a.c': 1,
+            'a.d': 'd',
+        }).unflat()
+
+        d2 = d1.extract('a.a,a.b,a.c,x__as__xx,a:unflat')
+        assert d2.set_keys() == set(['a', 'xx'])
+        assert d2.flat().set_keys() == set(['a.a', 'a.b', 'a.c', 'xx'])
+
+    def test_default_assign(self):
+        d1 = slovar(a=1,b=2,c=3)
+
+        d2 = d1.extract('a:=10:int')
+        assert d2.a == 10
+
+        d2 = d1.extract('a:=10:int|default,b')
+        assert d2.a == 1
+        assert d2.set_keys() == set(['a', 'b'])
+
+        d2 = d1.extract('d:=100:int|default')
+        assert d2.d == 100
+
+        d2 = d1.extract('a:=10:int|default,*')
+        assert d2.set_keys() == set(['a', 'b', 'c'])
 

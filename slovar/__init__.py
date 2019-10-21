@@ -164,6 +164,9 @@ class slovar(dict):
                 elif tr == 'float':
                     val = float(val) if val else val
 
+                elif tr == 'bool':
+                    val = bool(val) if val else val
+
                 elif tr == 'flat' and isinstance(val, slovar):
                     val = val.flat()
 
@@ -262,6 +265,11 @@ class slovar(dict):
 
                 else:
                     trs = split_strip(tr, '|')
+                    if 'default' in trs:
+                        trs.remove('default')
+                        if kk in _d:
+                            continue
+
                     _d[kk] = self.tcast(kk, val, trs) if trs else val
 
             return _d
@@ -274,7 +282,7 @@ class slovar(dict):
 
             for new_key, key in list(op.show_as_r.items()):
                 try:
-                    _d_show_as.update(slovar({new_key:_d.nested_get(key)}))
+                    _d_show_as[new_key] = _d.nested_get(key)
                 except (KeyError,IndexError):
                     pass
 
@@ -286,7 +294,9 @@ class slovar(dict):
                         continue
 
                 if not op.star:
-                    _d_show_as.update(_d.subset(kk))
+                    _d_show_as.update(_d.subset(kk).flat())
+
+            # _d_show_as = _d_show_as.unflat([kk for kk in op.exp_only if '.' not in kk])
 
             if op.star:
                 return _d_show_as.merge(_d)
@@ -895,10 +905,12 @@ class slovar(dict):
     def concat_values(self, sep=':'):
         concat = []
 
-        for kk in sorted(self.keys()):
+        _keys = sorted(self.keys())
+
+        for kk in _keys:
             concat.append(str(self[kk]))
 
-        return sep.join(concat)
+        return sep.join(_keys), sep.join(concat)
 
     def call_converter(self, name, *arg, **kw):
         try:
