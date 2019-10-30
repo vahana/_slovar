@@ -83,7 +83,7 @@ def aslist(dset, value, sep=',', remove_empty=True, unique=False, itype=None):
         _lst = [value]
 
     if remove_empty:
-        _lst = (list(filter(bool, _lst)))
+        _lst = [it for it in _lst if it is not None]
 
     if unique:
         _lst = list(set(_lst))

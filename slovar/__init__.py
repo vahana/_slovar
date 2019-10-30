@@ -296,8 +296,6 @@ class slovar(dict):
                 if not op.star:
                     _d_show_as.update(_d.subset(kk).flat())
 
-            # _d_show_as = _d_show_as.unflat([kk for kk in op.exp_only if '.' not in kk])
-
             if op.star:
                 return _d_show_as.merge(_d)
 
@@ -530,7 +528,15 @@ class slovar(dict):
         return _dict
 
     def mget(self, keys):
-        return [self[e] for e in split_strip(keys) if e in self]
+        _d = slovar()
+        for it in self:
+            if it in keys:
+                _d[it] = self[it]
+        return _d
+
+    def mpop(self, keys):
+        for it in keys:
+            self.pop(it, None)
 
     def has(self, keys, check_type=str,
             err='', _all=True, allow_missing=False,
