@@ -84,15 +84,15 @@ def process_fields(fields):
                 flats[tr_field] = 1
                 trans.remove('flat')
 
-            elif 'flat_all' in trans:
+            elif 'flatall' in trans:
                 flats[tr_field] = 0
-                trans.remove('flat_all')
+                trans.remove('flatall')
 
             if 'unflat' in trans:
                 trans.remove('unflat')
                 unflats.append(tr_field)
-            else:
-                transforms[tr_field] = trans
+
+            transforms[tr_field] = trans
 
         if field in unflats:
             continue

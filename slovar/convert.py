@@ -8,7 +8,7 @@ def parametrize(func):
 
     def wrapper(dset, name, default=None, raise_on_values=None, pop=False,
                             allow_missing=False, set_as=None, pop_empty=False,
-                            _raise=True, **kw):
+                            _raise=True, mod=None, **kw):
 
         if pop_empty:
             allow_missing = True
@@ -39,6 +39,9 @@ def parametrize(func):
                 raise ValueError(sys.exc_info()[1])
             else:
                 return
+
+        if mod:
+            result = mod(result)
 
         if pop:
             dset.pop(name, None)

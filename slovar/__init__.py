@@ -13,6 +13,22 @@ from slovar.json import json_dumps
 from slovar.lists import *
 from slovar.strings import *
 
+
+def ld2l(ld, key):
+    return [it[key] for it in ld]
+
+
+def ld2dl(ld, key=None):
+    dl = {}
+    for _d in ld:
+        for kk,vv in _d.items():
+            if kk in dl:
+                dl[kk].append(vv)
+            else:
+                dl[kk] = [vv]
+    return dl
+
+
 def parse_func_params(s):
     pattern = r'(\w[\w\d_]*)\((.*)\)$'
     match = re.match(pattern, s)
@@ -22,7 +38,7 @@ def parse_func_params(s):
         return []
 
 TCAST_NONE = True
-TCAST_FUNCS = ['sort', 'index', 'concat', 'slice']
+TCAST_FUNCS = ['sort', 'index', 'concat', 'slice', 'ld2l']
 
 log = logging.getLogger(__name__)
 
@@ -62,15 +78,18 @@ class slovar(dict):
             return cls({key: cls.from_dotted(sufix, val)})
 
     def __init__(self, *arg, **kw):
-        super(slovar, self).__init__(*arg, **kw)
+        super().__init__(*arg, **kw)
 
-        for key, val in list(self.items()):
-            if isinstance(val, dict):
+        #recursively convert dicts to slovar if they arent already
+        for key, val in self.items():
+            if isinstance(val, slovar):
+                continue
+            elif isinstance(val, dict):
                 self[key] = slovar(val)
-            if isinstance(val, list):
+            elif isinstance(val, list):
                 new_list = []
                 for each in val:
-                    if isinstance(each, dict):
+                    if isinstance(each, dict) and not isinstance(each, slovar):
                         new_list.append(slovar(each))
                     else:
                         new_list.append(each)
@@ -131,7 +150,7 @@ class slovar(dict):
         return slovar(dct)
 
     def copy(self):
-        return slovar(super(slovar, self).copy())
+        return copy.deepcopy(self)
 
     def deepcopy(self):
         return copy.deepcopy(self)
@@ -145,8 +164,15 @@ class slovar(dict):
         prev_tr = None
 
         def concat(val, sep=''):
+            SEP = slovar(
+                COMMA=',',
+                SPACE=' ',
+            )
+
+            sep = SEP.get(sep, sep)
+
             if isinstance(val, list):
-                return sep.join([str(it) for it in val])
+                return sep.join([str(it) for it in val if it])
             else:
                 return str(val)
 
@@ -170,13 +196,26 @@ class slovar(dict):
                 elif tr == 'flat' and isinstance(val, slovar):
                     val = val.flat()
 
+                elif tr == 'flatall' and isinstance(val, slovar):
+                    val = val.flat(keep_lists=False)
+
+                elif tr == 'unflat' and isinstance(val, slovar):
+                    val = val.unflat()
+
                 elif tr == 'dt':
                     if val:
                         val = str2dt(val)
 
+                elif tr == 'tm2dt':
+                    if val:
+                        val = datetime.utcfromtimestamp(val/1000).strftime('%Y-%m-%d %H:%M:%S')
+
                 elif tr == 'dtob':
                     if val:
                         val = ObjectId(val).generation_time
+
+                # elif tr == 'ld2dl' and isinstance(val, list):
+                #     val = ld2dl(val)
 
                 elif tr in TCAST_FUNCS:
                     prev_tr = tr
@@ -197,6 +236,9 @@ class slovar(dict):
 
                     elif prev_tr == 'slice':
                         val = val[:int(tr)]
+
+                    elif prev_tr == 'ld2l':
+                        val = ld2l(val, tr)
 
                     prev_tr = None
 
@@ -286,6 +328,7 @@ class slovar(dict):
                 except (KeyError,IndexError):
                     pass
 
+            _d_remainder = slovar()
             for kk, count in collections.Counter(op.exp_only).items():
                 if kk in op.show_as:
                     if len(op.show_as[kk]) == count:
@@ -294,7 +337,9 @@ class slovar(dict):
                         continue
 
                 if not op.star:
-                    _d_show_as.update(_d.subset(kk).flat())
+                    _d_remainder = _d_remainder.update_with(_d.subset(kk), flatten=kk)
+
+            _d_show_as.update(_d_remainder)
 
             if op.star:
                 return _d_show_as.merge(_d)
@@ -335,10 +380,10 @@ class slovar(dict):
         _d = process_flats(_d)
         _d = process_show_as(_d)
         _d = process_assignments(_d)
+        _d = process_unflats(_d)
         _d = process_trans(_d)
         _d = process_defaults(_d)
         _d = process_envelope(_d)
-        _d = process_unflats(_d)
 
         return _d
 
@@ -917,6 +962,9 @@ class slovar(dict):
             concat.append(str(self[kk]))
 
         return sep.join(_keys), sep.join(concat)
+
+    def ordered_values(self, keys):
+        return [self.get(kk) for kk in keys if kk in self]
 
     def call_converter(self, name, *arg, **kw):
         try:

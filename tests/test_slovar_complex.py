@@ -389,7 +389,7 @@ class TestSlovarComplex(object):
         assert d2.set_keys() == set(['dlist'])
 
         d2 = d1.extract('a.d.dd__as__dlist, a.d.dd')
-        assert d2.set_keys() == set(['dlist', 'a.d.dd'])
+        assert d2.set_keys() == set(['dlist', 'a'])
 
     def test_star(self):
         d1 = slovar({
@@ -504,7 +504,7 @@ class TestSlovarComplex(object):
         })
 
         d2 = d1.extract(['a__as__aa.a', 'b__as__aa.b', 'aa:unflat', 'd.d'])
-        assert d2.set_keys() == set(['aa', 'd.d'])
+        assert d2.set_keys() == set(['aa', 'd'])
 
     def test_show_as_double(self):
         d1 = slovar({
@@ -555,7 +555,7 @@ class TestSlovarComplex(object):
             'a.d': 'd',
         }).unflat()
 
-        d2 = d1.extract('a.a,a.b,a.c,x__as__xx,a:unflat')
+        d2 = d1.extract('a.a,a.b,a.c,x__as__xx')
         assert d2.set_keys() == set(['a', 'xx'])
         assert d2.flat().set_keys() == set(['a.a', 'a.b', 'a.c', 'xx'])
 
