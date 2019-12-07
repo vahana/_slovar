@@ -528,6 +528,21 @@ class slovar(dict):
 
         return _d
 
+    def nested_in(self, fld):
+        if fld in self:
+            return True
+        elif '.' not in fld:
+            return False
+
+        inner = self
+        for kk in fld.split('.'):
+            if isinstance(inner, dict) and kk in inner:
+                inner = inner[kk]
+            else:
+                return False
+
+        return True
+
     def nested_pop(self, flds):
         self_d = self.copy()
 
@@ -679,8 +694,10 @@ class slovar(dict):
         return self.flat().get(key, *arg, **kw)
 
     def update_with(self, _dict, overwrite=True, append_to=None,
-                                    append_to_set=None, flatten=None,
-                                    merge_to=None):
+                                                 append_to_set=None,
+                                                 flatten=None,
+                                                 merge_to=None,
+                                                 remove_from=None):
 
         self_dict = self.copy()
         if not _dict:
@@ -701,14 +718,14 @@ class slovar(dict):
                 #reference to nested field?
                 if '.' in k and (not flatten or (isinstance(flatten, list) and k.split('.')[0] not in flatten)):
                     raise self.bad_value_error_klass(
-                        '`append_to_` referrers to nested field `%s` without flattening.'
+                        'list operation referrers to nested field `%s` without flattening.'
                         ' forgot to pass `flatten=%s`?' % (k, k.split('.')[0]))
-
             return _d
 
         append_to = process_append_to_param(append_to)
         append_to_set = process_append_to_param(append_to_set)
         merge_to = process_append_to_param(merge_to)
+        remove_from = process_append_to_param(remove_from)
 
         def _build_list(_lst, new_val):
             if isinstance(_lst, list):
@@ -812,6 +829,26 @@ class slovar(dict):
 
             return new_lst
 
+        def _remove_from(self_dict, key, val):
+            set_key = remove_from.get(key)
+            new_lst = self_dict.get(key, [])[:] # copy
+
+            for vv in val:
+                for vvv in new_lst:
+                    if set_key:
+                        if not isinstance(vv, dict) or not isinstance(vvv, dict):
+                            raise self.bad_value_error_klass(
+                                'set key `%s` can be specified only for dicts. Got : `%s` and `%s`' % (
+                                                                                        set_key, vv, vvv))
+
+                        if set_key in vv and vv[set_key] == vvv.get(set_key, None):
+                            new_lst.remove(vvv)
+                    else:
+                        if vv == vvv:
+                            new_lst.remove(vvv)
+
+            return new_lst
+
         def can_overwrite(key, overwrite, flat_overwrites):
             if overwrite == True:
                 return True
@@ -848,6 +885,8 @@ class slovar(dict):
                 self_dict[key] = _append_to_set(self_dict, key, val)
             elif key in merge_to:
                 self_dict[key] = _merge_to(self_dict, key, val)
+            elif key in remove_from:
+                self_dict[key] = _remove_from(self_dict, key, val)
             elif key not in self_dict:
                 self_dict[key] = val
             elif overwrite and can_overwrite(key, overwrite, flat_overwrites):

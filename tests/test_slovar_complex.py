@@ -532,7 +532,7 @@ class TestSlovarComplex(object):
             'd.d': 1,
         }).unflat()
 
-        d2 = d1.extract('b.0.bb:=111,b:flat_all|unflat')
+        d2 = d1.extract('b.0.bb:=111,b:flatall|unflat')
         assert d2.set_keys() == set(['b'])
         assert d2.b[0]['bb'] == '111'
 
@@ -574,4 +574,69 @@ class TestSlovarComplex(object):
 
         d2 = d1.extract('a:=10:int|default,*')
         assert d2.set_keys() == set(['a', 'b', 'c'])
+
+    def test_update_with_remove_from(self):
+        d1 = slovar({
+            'a': [],
+            'aa.a': [1,2,3],
+            'aa.b': [{'a':1}, {'b':2}],
+            'aa.c': [{'a': 1}, 2, 3],
+        }).unflat()
+
+        d2 = slovar({
+            'a': [1],
+            'aa.a': [2],
+            'aa.b': [{'a':1}, {'x': 1}],
+            'aa.c': [3]
+        }).unflat()
+
+        d3 = d1.update_with(d2, remove_from='a')
+        assert d3.a == d1.a
+
+        d3 = d1.update_with(d2, remove_from='aa.a', flatten=['aa'])
+        assert d3.aa.a == [1,3]
+
+        with pytest.raises(ValueError):
+            d3 = d1.update_with(d2, remove_from='aa.a:xxx', flatten=['aa'])
+
+        d3 = d1.update_with(d2, remove_from='aa.c', flatten=['aa'])
+        assert d3.aa.c == [{'a':1}, 2]
+
+        with pytest.raises(ValueError):
+            d3 = d1.update_with(d2, remove_from='aa.c:xxx', flatten=['aa'])
+
+        d3 = d1.update_with(d2, remove_from='aa.b:a', flatten=['aa'])
+        assert 'a' not in d3.aa.b
+
+    def test_update_with_nested_list(self):
+
+        d1 = slovar({
+            'a': [],
+            'aa.a': [1,2,3],
+            'aa.b': [{'a':1}, {'b':2}],
+            'aa.c': [{'a': 1}, 2, 3],
+        }).unflat()
+
+        d2 = slovar({
+            'a': [1],
+            'aa.a': [4],
+            'aa.b': [{'a':1}, {'x': 1}],
+            'aa.c': [3]
+        }).unflat()
+
+        d3 = d1.update_with(d2, append_to_set='aa.a', flatten='aa.a')
+        assert d3.aa.a == [1,2,3,4]
+
+    def test_nested_in(self):
+        d1 = slovar({
+            'a.b.c': 1,
+            'x': 2
+            }).unflat()
+
+        assert d1.nested_in('a')
+        assert d1.nested_in('a.b')
+        assert d1.nested_in('a.b.c')
+        assert d1.nested_in('x')
+        assert not d1.nested_in('a.y')
+        assert not d1.nested_in('x.y')
 
