@@ -544,7 +544,7 @@ class TestSlovarComplex(object):
         }).unflat()
 
         d2 = d1.extract('d.d__as__d.ddd,*')
-        assert d2.flat().set_keys() == set(['d.ddd', 'a', 'b'])
+        assert d2.flat().set_keys() == set(['d.ddd', 'a', 'b', 'd'])
 
     def test_multi_nested_with_show_as(self):
         d1 = slovar({
@@ -639,4 +639,26 @@ class TestSlovarComplex(object):
         assert d1.nested_in('x')
         assert not d1.nested_in('a.y')
         assert not d1.nested_in('x.y')
+
+    def test_simple_combo1(self):
+        d1 = slovar({
+            'a.b.b1': 1,
+            'a.b.b2': 2,
+            'd.dd': {}
+            }).unflat()
+
+        d2 = d1.extract('d, a.b.b1__as__bb1')
+        assert 'd' in d2
+        assert 'bb1' in d2
+
+
+    def test_flat_empty(self):
+        d1 = slovar({
+            'a.b.b1': 1,
+            'a.b.b2': 2,
+            'd.dd': {}
+            }).unflat()
+
+        d2 = d1.flat()
+        assert 'd.dd' in d2
 

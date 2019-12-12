@@ -55,17 +55,25 @@ def unflat(_dict, only=[], sep='.'):
 
 def flat(_dict, base_key='', keep_lists=False, sep='.'):
     result = {}
-    # Make a dict regardless, ints as keys for a list
     try:
-        iterable = _dict if isinstance(_dict, dict) else dict(enumerate(_dict))
+        if isinstance(_dict, dict):
+            iterable = _dict
+        else:
+            #turn the nested list in to a dict of <index, item>
+            iterable = dict(enumerate(_dict))
+
         for key, value in list(iterable.items()):
             # Join keys but prevent keys from starting by `sep`
-            dotted_key = key if not base_key else sep.join([base_key, str(key)])
-            # Recursion if we find a dict or list, except if we're keeping lists
-            if isinstance(value, dict) or (isinstance(value, list) and not keep_lists):
-                result.update(flat(value, base_key=dotted_key, keep_lists=keep_lists, sep=sep))
-            # Otherwise just set attribute
+            if not base_key:
+                dotted_key = key
             else:
+                dotted_key = sep.join([base_key, str(key)])
+
+            # Recursion if we find a dict or list, except if we're keeping lists
+            if value and (isinstance(value, dict) or (isinstance(value, list) and not keep_lists)):
+                result.update(flat(value, base_key=dotted_key, keep_lists=keep_lists, sep=sep))
+            else:
+                # Otherwise just set attribute
                 result[dotted_key] = value
     except:
         log.error('Problems calling flat on:\n%s' % _dict)
