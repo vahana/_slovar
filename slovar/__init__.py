@@ -95,6 +95,9 @@ class slovar(dict):
                         new_list.append(each)
                 self[key] = new_list
 
+    def __call__(self, key):
+        return self.get(key)
+
     def bad_value_error_klass(self, e):
         return ValueError(e)
 
