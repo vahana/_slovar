@@ -38,7 +38,7 @@ def parse_func_params(s):
         return []
 
 TCAST_NONE = True
-TCAST_FUNCS = ['sort', 'index', 'concat', 'slice', 'ld2l']
+TCAST_FUNCS = ['sort', 'index', 'concat', 'slice', 'ld2l', 'split']
 
 log = logging.getLogger(__name__)
 
@@ -217,6 +217,10 @@ class slovar(dict):
                     if val:
                         val = ObjectId(val).generation_time
 
+                elif tr == 'strip':
+                    if isinstance(val, str):
+                        val = val.strip()
+
                 # elif tr == 'ld2dl' and isinstance(val, list):
                 #     val = ld2dl(val)
 
@@ -242,6 +246,10 @@ class slovar(dict):
 
                     elif prev_tr == 'ld2l':
                         val = ld2l(val, tr)
+
+                    elif prev_tr == 'split':
+                        if isinstance(val, str):
+                            val = val.split(tr)
 
                     prev_tr = None
 
@@ -383,8 +391,8 @@ class slovar(dict):
         _d = process_flats(_d)
         _d = process_show_as(_d)
         _d = process_assignments(_d)
-        _d = process_unflats(_d)
         _d = process_trans(_d)
+        _d = process_unflats(_d)
         _d = process_defaults(_d)
         _d = process_envelope(_d)
 
@@ -426,9 +434,9 @@ class slovar(dict):
             _d = self.copy()
 
         exp_only = op.exp_only[:]
+        only_nested_flds = []
 
         if exp_only:
-            nested_flds = []
             for fld in exp_only:
                 if fld in self:
                     _d[fld] = self[fld]
@@ -451,16 +459,16 @@ class slovar(dict):
                         else:
                             _d[fld] = self.nested_get(fld)
 
-                        nested_flds.append(fld)
+                        only_nested_flds.append(fld)
                     except (KeyError, IndexError):
                         pass
-
-            if nested_flds and isinstance(_d, dict):
-                _d = _d.unflat(nested_flds)
 
         if op.exclude:
             _d = _d or self
             _d = _d.remove(op.exclude)
+
+        if only_nested_flds and isinstance(_d, dict):
+            _d = _d.unflat(only_nested_flds)
 
         return _d
 
