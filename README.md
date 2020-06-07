@@ -55,5 +55,7 @@ In [11]: dd = d.unflat()
 In [12]: dd.c.c1
 Out[12]: '11'
 
+In [14]: dd.flat() == d
+Out[14]: True
 
 ```
