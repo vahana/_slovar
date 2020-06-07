@@ -1,6 +1,6 @@
 # Slovar
 
-Slovar is a variation of "named dict" implantation with extra functionalities (lots of them). Widely used in prf, jobs and datasets.
+Slovar is a variation of "named dict" implantation with extra functionalities (lots of them). Widely used in [prf](https://github.com/vahana/prf), [jobs](https://github.com/vahana/jobs) and [datasets](https://github.com/vahana/datasets).
 
 Some of more prominent features are:
 
