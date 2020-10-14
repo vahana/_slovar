@@ -45,12 +45,6 @@ log = logging.getLogger(__name__)
 
 class slovar(dict):
     """Named dict, with some set functionalities
-
-        dset = slovar(a=1,b={'c':1})
-        dset.a == dset['a'] == 1
-        dset.b.c == 1
-        dset.subset(['a']) == {'a':1} == dset.subset('-b')
-
     """
 
     @classmethod
@@ -96,7 +90,7 @@ class slovar(dict):
                 self[key] = new_list
 
     def __call__(self, key):
-        return self.get(key)
+        return self.extract(key)
 
     def bad_value_error_klass(self, e):
         return ValueError(e)
