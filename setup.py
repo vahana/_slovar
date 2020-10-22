@@ -15,8 +15,9 @@ install_requires = [
 setup(
     name='slovar',
     version=VERSION,
-    description='slovar',
+    description='slovar - dict on steroids',
     long_description=README + '\n\n' +  CHANGES,
+    long_description_content_type='text/markdown'
     classifiers=[
         "Programming Language :: Python",
     ],
