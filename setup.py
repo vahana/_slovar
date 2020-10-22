@@ -9,6 +9,7 @@ VERSION = open(os.path.join(here, 'VERSION.txt')).read().strip()
 
 install_requires = [
     'python-dateutil',
+    'bson'
 ]
 
 setup(
