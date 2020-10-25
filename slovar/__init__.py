@@ -96,7 +96,7 @@ class slovar(dict):
         return ValueError(e)
 
     def missing_key_error_klass(self, e):
-        return AttributeError(e)
+        return KeyError(e)
 
     def __getattr__(self, key):
         if key.startswith('__'):

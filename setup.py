@@ -17,7 +17,7 @@ setup(
     version=VERSION,
     description='slovar - dict on steroids',
     long_description=README + '\n\n' +  CHANGES,
-    long_description_content_type='text/markdown'
+    long_description_content_type='text/markdown',
     classifiers=[
         "Programming Language :: Python",
     ],
