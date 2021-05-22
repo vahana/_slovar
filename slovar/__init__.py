@@ -182,13 +182,13 @@ class slovar(dict):
                     val = str(val)
 
                 elif tr == 'int':
-                    val = int(val) if val else val
+                    val = int(val)
 
                 elif tr == 'float':
-                    val = float(val) if val else val
+                    val = float(val)
 
                 elif tr == 'bool':
-                    val = bool(val) if val else val
+                    val = bool(val)
 
                 elif tr == 'flat' and isinstance(val, slovar):
                     val = val.flat()
@@ -203,9 +203,9 @@ class slovar(dict):
                     if val:
                         val = str2dt(val)
 
-                elif tr == 'tm2dt':
+                elif tr == 'ts2dt':
                     if val:
-                        val = datetime.utcfromtimestamp(val/1000).strftime('%Y-%m-%d %H:%M:%S')
+                        val = datetime.utcfromtimestamp(val).strftime('%Y-%m-%d %H:%M:%S')
 
                 elif tr == 'dtob':
                     if val:
